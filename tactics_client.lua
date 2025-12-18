@@ -308,7 +308,7 @@
                         loadedLanguage[xmlNodeGetName(v72)] = xmlNodeGetAttribute(v72, "string");
                     end;
                     xmlUnloadFile(v68);
-                    local v73 = xmlFindChild(_client, "gameplay", 0);
+                    local v73 = xmlFindChild(_client, "gameplay", 0) or xmlCreateChild(_client, "gameplay");
                     xmlNodeSetAttribute(v73, "language", v67);
                     xmlSaveFile(_client);
                     if not config_gameplay_languagelist[v67] then
@@ -14955,6 +14955,7 @@ end)();
     plossdata = {{0, getTickCount()}};
     onClientResourceStart = function(__) --[[ Line: 10 ]]
         loadedLanguage = false;
+        _loadingConfig = true; -- Flag para evitar que los handlers de scroll cambien los checkboxes durante la carga
         _client = xmlLoadFile("config/_client.xml");
         if not _client then
             _client = xmlCreateFile("config/_client.xml", "config");
@@ -14969,26 +14970,43 @@ end)();
         config_scrollers = {};
         config_scrollers.Audio = guiCreateGridList(135, 25, 340, 460, false, config_window);
         guiSetVisible(config_scrollers.Audio, false);
+        if not _client then
+            _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+        end;
         local v2420 = xmlFindChild(_client, "audio", 0);
         if not v2420 then
             v2420 = xmlCreateChild(_client, "audio");
-            xmlNodeSetAttribute(v2420, "voice", "true");
-            xmlNodeSetAttribute(v2420, "voicevol", "100");
-            xmlNodeSetAttribute(v2420, "music", "true");
-            xmlNodeSetAttribute(v2420, "musicvol", "100");
+            -- Solo establecer valores por defecto si el nodo no existe
+            -- No sobrescribir si ya tiene valores guardados
+            if not xmlNodeGetAttribute(v2420, "voice") then
+                xmlNodeSetAttribute(v2420, "voice", "true");
+            end;
+            if not xmlNodeGetAttribute(v2420, "voicevol") then
+                xmlNodeSetAttribute(v2420, "voicevol", "100");
+            end;
+            if not xmlNodeGetAttribute(v2420, "music") then
+                xmlNodeSetAttribute(v2420, "music", "true");
+            end;
+            if not xmlNodeGetAttribute(v2420, "musicvol") then
+                xmlNodeSetAttribute(v2420, "musicvol", "100");
+            end;
         end;
         temp = xmlNodeGetAttribute(v2420, "voice") or "true";
         config_audio_voice = guiCreateCheckBox(0.05, 0.04, 0.33, 0.04, "Voice Sounds", temp == "true", true, config_scrollers.Audio);
         config_audio_voicevol = guiCreateScrollBar(0.42, 0.04, 0.43, 0.04, true, true, config_scrollers.Audio);
         config_audio_voicelab = guiCreateLabel(0.85, 0.04, 0.1, 0.04, "100%", true, config_scrollers.Audio);
         temp = tonumber(xmlNodeGetAttribute(v2420, "voicevol") or "100");
-        guiScrollBarSetScrollPosition(config_audio_voicevol, temp);
+        -- Establecer la posición del scrollbar sin disparar eventos durante la carga
+        guiSetProperty(config_audio_voicevol, "ScrollPosition", tostring(temp));
+        guiSetText(config_audio_voicelab, temp .. "%");
         temp = xmlNodeGetAttribute(v2420, "music") or "true";
         config_audio_music = guiCreateCheckBox(0.05, 0.1, 0.33, 0.04, "Music", temp == "true", true, config_scrollers.Audio);
         config_audio_musicvol = guiCreateScrollBar(0.42, 0.1, 0.43, 0.04, true, true, config_scrollers.Audio);
         config_audio_musiclab = guiCreateLabel(0.85, 0.1, 0.1, 0.04, "100%", true, config_scrollers.Audio);
         temp = tonumber(xmlNodeGetAttribute(v2420, "musicvol") or "100");
-        guiScrollBarSetScrollPosition(config_audio_musicvol, temp);
+        -- Establecer la posición del scrollbar sin disparar eventos durante la carga
+        guiSetProperty(config_audio_musicvol, "ScrollPosition", tostring(temp));
+        guiSetText(config_audio_musiclab, temp .. "%");
         config_scrollers.Gameplay = guiCreateGridList(135, 25, 340, 460, false, config_window);
         guiSetVisible(config_scrollers.Gameplay, false);
         local v2421 = xmlFindChild(_client, "gameplay", 0);
@@ -15104,6 +15122,7 @@ end)();
         config_close = guiCreateButton(5, 450, 120, 30, "Close", false, config_window);
         guiSetFont(config_close, "default-bold-small");
         xmlSaveFile(_client);
+        _loadingConfig = false; -- Terminamos de cargar, ahora los handlers pueden funcionar normalmente
         values_hud = guiCreateStaticImage(0, 0, xscreen, yscreen, "images/color_pixel.png", false);
         guiSetProperty(values_hud, "ImageColours", "tl:00000000 tr:00000000 bl:00000000 br:00000000");
         guiSetVisible(values_hud, false);
@@ -15335,6 +15354,7 @@ end)();
         if v2496 ~= "left" then
             return;
         else
+            --outputChatBox("source: " .. inspect(source) .. inspect(_client))
             if source == config_pagelist then
                 local v2500 = false;
                 local v2501 = guiGridListGetSelectedItem(config_pagelist);
@@ -15359,10 +15379,14 @@ end)();
                 end;
             end;
             if source == config_performance_fps then
-                local v2504 = xmlFindChild(_client, "performance", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2504 = xmlFindChild(_client, "performance", 0) or xmlCreateChild(_client, "performance");
+                --outputChatBox("v2504: " .. inspect(v2504) .. inspect(_client))
                 if guiCheckBoxGetSelected(config_performance_fps) then
                     xmlNodeSetAttribute(v2504, "fpsgraphic", "true");
-                    addEventHandler("onClientRefpsgraphicnder", root, onClientFPSDiagramRender);
+                    addEventHandler("onClientRender", root, onClientFPSDiagramRender);
                     guiSetVisible(hud_fps, true);
                 else
                     xmlNodeSetAttribute(v2504, "fpsgraphic", "false");
@@ -15372,7 +15396,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_performance_ploss then
-                local v2505 = xmlFindChild(_client, "performance", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2505 = xmlFindChild(_client, "performance", 0) or xmlCreateChild(_client, "performance");
                 if guiCheckBoxGetSelected(config_performance_ploss) then
                     xmlNodeSetAttribute(v2505, "plossgraphic", "true");
                     addEventHandler("onClientRender", root, onClientPLossDiagramRender);
@@ -15385,7 +15412,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_performance_spec then
-                local v2506 = xmlFindChild(_client, "performance", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2506 = xmlFindChild(_client, "performance", 0) or xmlCreateChild(_client, "performance");
                 if guiCheckBoxGetSelected(config_performance_spec) then
                     xmlNodeSetAttribute(v2506, "speclist", "true");
                     guiSetAlpha(speclist, 0.5);
@@ -15396,7 +15426,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_performance_roundhud then
-                local v2507 = xmlFindChild(_client, "performance", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2507 = xmlFindChild(_client, "performance", 0) or xmlCreateChild(_client, "performance");
                 if guiCheckBoxGetSelected(config_performance_roundhud) then
                     xmlNodeSetAttribute(v2507, "roundhud", "true");
                     for __, v2509 in pairs(components) do
@@ -15411,7 +15444,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_performance_helpinfo then
-                local v2512 = xmlFindChild(_client, "performance", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2512 = xmlFindChild(_client, "performance", 0) or xmlCreateChild(_client, "performance");
                 if guiCheckBoxGetSelected(config_performance_helpinfo) then
                     xmlNodeSetAttribute(v2512, "helpinfo", "true");
                     guiSetAlpha(infowindow, 1);
@@ -15422,7 +15458,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_performance_valueshud then
-                local v2513 = xmlFindChild(_client, "performance", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2513 = xmlFindChild(_client, "performance", 0) or xmlCreateChild(_client, "performance");
                 if guiCheckBoxGetSelected(config_performance_valueshud) then
                     xmlNodeSetAttribute(v2513, "valueshud", "true");
                     guiSetAlpha(values_hud, 1);
@@ -15441,7 +15480,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_performance_laser then
-                local v2514 = xmlFindChild(_client, "performance", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2514 = xmlFindChild(_client, "performance", 0) or xmlCreateChild(_client, "performance");
                 if guiCheckBoxGetSelected(config_performance_laser) then
                     xmlNodeSetAttribute(v2514, "laser", "true");
                     if next(laseraimRender) then
@@ -15459,7 +15501,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_audio_voice then
-                local v2517 = xmlFindChild(_client, "audio", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2517 = xmlFindChild(_client, "audio", 0) or xmlCreateChild(_client, "audio");
                 if guiCheckBoxGetSelected(config_audio_voice) then
                     xmlNodeSetAttribute(v2517, "voice", "true");
                 else
@@ -15468,7 +15513,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_audio_music then
-                local v2518 = xmlFindChild(_client, "audio", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2518 = xmlFindChild(_client, "audio", 0) or xmlCreateChild(_client, "audio");
                 if guiCheckBoxGetSelected(config_audio_music) then
                     xmlNodeSetAttribute(v2518, "music", "true");
                 else
@@ -15477,7 +15525,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_performance_vehmanager then
-                local v2519 = xmlFindChild(_client, "performance", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2519 = xmlFindChild(_client, "performance", 0) or xmlCreateChild(_client, "performance");
                 if guiCheckBoxGetSelected(config_performance_vehmanager) then
                     xmlNodeSetAttribute(v2519, "vehmanager", "true");
                     if not guiGetVisible(vehicle_window) then
@@ -15492,7 +15543,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_performance_weapmanager then
-                local v2520 = xmlFindChild(_client, "performance", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2520 = xmlFindChild(_client, "performance", 0) or xmlCreateChild(_client, "performance");
                 if guiCheckBoxGetSelected(config_performance_weapmanager) then
                     xmlNodeSetAttribute(v2520, "weapmanager", "true");
                     if not guiGetVisible(weapon_window) then
@@ -15507,7 +15561,10 @@ end)();
                 xmlSaveFile(_client);
             end;
             if source == config_performance_adminpanel then
-                local v2521 = xmlFindChild(_client, "performance", 0);
+                if not _client then
+                    _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                end;
+                local v2521 = xmlFindChild(_client, "performance", 0) or xmlCreateChild(_client, "performance");
                 if guiCheckBoxGetSelected(config_performance_adminpanel) then
                     xmlNodeSetAttribute(v2521, "adminpanel", "true");
                     if not guiGetVisible(admin_window) then
@@ -15591,17 +15648,22 @@ end)();
                 resetTimer(voiceScroll);
             else
                 voiceScroll = setTimer(function() --[[ Line: 569 ]]
-                    local v2526 = xmlFindChild(_client, "audio", 0);
+                    if not _client then
+                        _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                    end;
+                    local v2526 = xmlFindChild(_client, "audio", 0) or xmlCreateChild(_client, "audio");
                     local v2527 = guiScrollBarGetScrollPosition(config_audio_voicevol);
                     xmlNodeSetAttribute(v2526, "voicevol", tostring(v2527));
-                    if v2527 == 0 and xmlNodeGetAttribute(v2526, "voice") == "true" then
-                        xmlNodeSetAttribute(v2526, "voice", "false");
-                        guiCheckBoxSetSelected(config_audio_voice, false);
+                    -- Solo cambiar el checkbox si el volumen es 0 (tiene sentido desactivarlo)
+                    -- NUNCA cambiar a true solo porque el volumen > 0, respetar el valor guardado
+                    if v2527 == 0 then
+                        local currentVoice = xmlNodeGetAttribute(v2526, "voice");
+                        if currentVoice == "true" then
+                            xmlNodeSetAttribute(v2526, "voice", "false");
+                            guiCheckBoxSetSelected(config_audio_voice, false);
+                        end;
                     end;
-                    if v2527 > 0 and xmlNodeGetAttribute(v2526, "voice") == "false" then
-                        xmlNodeSetAttribute(v2526, "voice", "true");
-                        guiCheckBoxSetSelected(config_audio_voice, true);
-                    end;
+                    -- NO cambiar a true si volumen > 0, el usuario debe hacerlo manualmente
                     xmlSaveFile(_client);
                 end, 500, 1);
             end;
@@ -15618,17 +15680,22 @@ end)();
                 resetTimer(musicScroll);
             else
                 musicScroll = setTimer(function() --[[ Line: 594 ]]
-                    local v2531 = xmlFindChild(_client, "audio", 0);
+                    if not _client then
+                        _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+                    end;
+                    local v2531 = xmlFindChild(_client, "audio", 0) or xmlCreateChild(_client, "audio");
                     local v2532 = guiScrollBarGetScrollPosition(config_audio_musicvol);
                     xmlNodeSetAttribute(v2531, "musicvol", tostring(v2532));
-                    if v2532 == 0 and xmlNodeGetAttribute(v2531, "music") == "true" then
-                        xmlNodeSetAttribute(v2531, "music", "false");
-                        guiCheckBoxSetSelected(config_audio_music, false);
+                    -- Solo cambiar el checkbox si el volumen es 0 (tiene sentido desactivarlo)
+                    -- NUNCA cambiar a true solo porque el volumen > 0, respetar el valor guardado
+                    if v2532 == 0 then
+                        local currentMusic = xmlNodeGetAttribute(v2531, "music");
+                        if currentMusic == "true" then
+                            xmlNodeSetAttribute(v2531, "music", "false");
+                            guiCheckBoxSetSelected(config_audio_music, false);
+                        end;
                     end;
-                    if v2532 > 0 and xmlNodeGetAttribute(v2531, "music") == "false" then
-                        xmlNodeSetAttribute(v2531, "music", "true");
-                        guiCheckBoxSetSelected(config_audio_music, true);
-                    end;
+                    -- NO cambiar a true si volumen > 0, el usuario debe hacerlo manualmente
                     xmlSaveFile(_client);
                 end, 500, 1);
             end;
@@ -15636,13 +15703,19 @@ end)();
     end;
     onClientGUIBlur = function() --[[ Line: 611 ]]
         if source == config_audio_voicevol then
-            local v2533 = xmlFindChild(_client, "audio", 0);
+            if not _client then
+                _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+            end;
+            local v2533 = xmlFindChild(_client, "audio", 0) or xmlCreateChild(_client, "audio");
             local v2534 = guiScrollBarGetScrollPosition(config_audio_voicevol);
             xmlNodeSetAttribute(v2533, "voicevol", tostring(v2534));
             xmlSaveFile(_client);
         end;
         if source == config_audio_musicvol then
-            local v2535 = xmlFindChild(_client, "audio", 0);
+            if not _client then
+                _client = xmlLoadFile("config/_client.xml") or xmlCreateFile("config/_client.xml", "config");
+            end;
+            local v2535 = xmlFindChild(_client, "audio", 0) or xmlCreateChild(_client, "audio");
             local v2536 = guiScrollBarGetScrollPosition(config_audio_musicvol);
             xmlNodeSetAttribute(v2535, "musicvol", tostring(v2536));
             xmlSaveFile(_client);
@@ -15653,6 +15726,7 @@ end)();
             local v2538 = config_gameplay_languagelist[guiGetText(config_gameplay_language)];
             loadedLanguage = {};
             local v2539 = xmlLoadFile(v2538);
+            outputChatBox("v2539: " .. inspect(v2539))
             if v2539 then
                 local v2540 = xmlNodeGetAttribute(v2539, "name") or "";
                 local v2541 = xmlNodeGetAttribute(v2539, "author") or "";
@@ -15661,7 +15735,7 @@ end)();
                     loadedLanguage[xmlNodeGetName(v2543)] = xmlNodeGetAttribute(v2543, "string");
                 end;
                 xmlUnloadFile(v2539);
-                local v2544 = xmlFindChild(_client, "gameplay", 0);
+                local v2544 = xmlFindChild(_client, "gameplay", 0) or xmlCreateChild(_client, "gameplay");
                 xmlNodeSetAttribute(v2544, "language", v2538);
                 xmlSaveFile(_client);
                 triggerEvent("onClientLanguageChange", localPlayer, v2538);
@@ -15672,7 +15746,7 @@ end)();
                 Toggle = "toggle", 
                 Hold = "hold"
             })[guiGetText(config_gameplay_nitrocontrol)];
-            local v2546 = xmlFindChild(_client, "gameplay", 0);
+            local v2546 = xmlFindChild(_client, "gameplay", 0) or xmlCreateChild(_client, "gameplay");
             xmlNodeSetAttribute(v2546, "nitrocontrol", v2545);
             xmlSaveFile(_client);
         end;
