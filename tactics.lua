@@ -1,99 +1,98 @@
 (function(...)
     if localPlayer == nil then
-        local v0 = createElement("Tactics", "Tactics");
-        setElementData(v0, "version", "1.2 r20");
+        local tacticsElement = createElement("Tactics", "Tactics");
+        setElementData(tacticsElement, "version", "1.2 r20");
         do
-            local l_v0_0 = v0;
+            local serverTacticsRef = tacticsElement;
             getAllTacticsData = function()
-                return getElementData(l_v0_0, "AllData") or {};
+                return getElementData(serverTacticsRef, "AllData") or {};
             end;
             getTacticsData = function(...)
-                local v2 = true;
-                local v3 = {...};
-                if type(v3[#v3]) == "boolean" then
-                    v2 = table.remove(v3);
+                local shouldParseData = true;
+                local argumentsArray = {...};
+                if type(argumentsArray[#argumentsArray]) == "boolean" then
+                    shouldParseData = table.remove(argumentsArray);
                 end;
-                if #v3 == 1 then
-                    local v4 = getElementData(l_v0_0, v3[1]);
-                    if v2 and type(v4) == "string" and string.find(v4, "|") then
-                        return gettok(v4, 1, string.byte("|")), split(gettok(v4, 2, string.byte("|")), ",");
+                if #argumentsArray == 1 then
+                    local retrievedData = getElementData(serverTacticsRef, argumentsArray[1]);
+                    if shouldParseData and type(retrievedData) == "string" and string.find(retrievedData, "|") then
+                        return gettok(retrievedData, 1, string.byte("|")), split(gettok(retrievedData, 2, string.byte("|")), ",");
                     else
-                        return v4;
+                        return retrievedData;
                     end;
-                elseif #v3 > 1 then
-                    local v5 = nil;
-                    for v6, v7 in ipairs(v3) do
-                        if v6 == 1 then
-                            v5 = getElementData(l_v0_0, v7);
+                elseif #argumentsArray > 1 then
+                    local nestedData = nil;
+                    for currentIndex, currentKey in ipairs(argumentsArray) do
+                        if currentIndex == 1 then
+                            nestedData = getElementData(serverTacticsRef, currentKey);
                         else
-                            v5 = v5[v7];
+                            nestedData = nestedData[currentKey];
                         end;
-                        if not v5 then
+                        if not nestedData then
                             return nil;
                         end;
                     end;
-                    if v2 and type(v5) == "string" and string.find(v5, "|") then
-                        return gettok(v5, 1, string.byte("|")), split(gettok(v5, 2, string.byte("|")), ",");
+                    if shouldParseData and type(nestedData) == "string" and string.find(nestedData, "|") then
+                        return gettok(nestedData, 1, string.byte("|")), split(gettok(nestedData, 2, string.byte("|")), ",");
                     else
-                        return v5;
+                        return nestedData;
                     end;
                 else
                     return nil;
                 end;
             end;
-            getDataType = function(v8) --[[ Line: 42 ]]
-                if type(v8) == "string" then
-                    if string.find(v8, "|") then
+            getDataType = function(dataToCheck) 
+                if type(dataToCheck) == "string" then
+                    if string.find(dataToCheck, "|") then
                         return "parameter";
-                    elseif string.find(v8, ":") then
+                    elseif string.find(dataToCheck, ":") then
                         return "time";
-                    elseif v8 == "true" or v8 == "false" then
+                    elseif dataToCheck == "true" or dataToCheck == "false" then
                         return "toggle";
                     end;
                 end;
-                return type(v8);
+                return type(dataToCheck);
             end;
-            setTacticsData = function(v9, ...) --[[ Line: 50 ]]
-                -- upvalues: l_v0_0 (ref)
-                local v10 = false;
-                local v11 = {...};
-                if type(v11[#v11]) == "boolean" then
-                    v10 = table.remove(v11);
+            setTacticsData = function(valueToSet, ...) 
+                local mergeWithExisting = false;
+                local pathArguments = {...};
+                if type(pathArguments[#pathArguments]) == "boolean" then
+                    mergeWithExisting = table.remove(pathArguments);
                 end;
-                local v12 = nil;
-                local v13 = {};
-                if #v11 > 1 then
-                    v13[1] = getElementData(l_v0_0, v11[1]);
-                    if type(v13[1]) ~= "table" then
-                        v13[1] = {};
+                local previousValue = nil;
+                local dataHierarchy = {};
+                if #pathArguments > 1 then
+                    dataHierarchy[1] = getElementData(serverTacticsRef, pathArguments[1]);
+                    if type(dataHierarchy[1]) ~= "table" then
+                        dataHierarchy[1] = {};
                     end;
-                    for v14 = 2, #v11 - 1 do
-                        v13[v14] = type(v13[v14 - 1][v11[v14]]) == "table" and v13[v14 - 1][v11[v14]] or {};
+                    for depthIndex = 2, #pathArguments - 1 do
+                        dataHierarchy[depthIndex] = type(dataHierarchy[depthIndex - 1][pathArguments[depthIndex]]) == "table" and dataHierarchy[depthIndex - 1][pathArguments[depthIndex]] or {};
                     end;
-                    if type(v9) == "table" or v13[#v11 - 1][v11[#v11]] ~= v9 then
-                        v12 = v13[#v11 - 1][v11[#v11]];
-                        if v10 and getDataType(v12) == "parameter" then
-                            v13[#v11 - 1][v11[#v11]] = tostring(v9) .. string.sub(v12, string.find(v12, "|"), -1);
-                        elseif type(v9) == "string" then
-                            v13[#v11 - 1][v11[#v11]] = tostring(v9);
+                    if type(valueToSet) == "table" or dataHierarchy[#pathArguments - 1][pathArguments[#pathArguments]] ~= valueToSet then
+                        previousValue = dataHierarchy[#pathArguments - 1][pathArguments[#pathArguments]];
+                        if mergeWithExisting and getDataType(previousValue) == "parameter" then
+                            dataHierarchy[#pathArguments - 1][pathArguments[#pathArguments]] = tostring(valueToSet) .. string.sub(previousValue, string.find(previousValue, "|"), -1);
+                        elseif type(valueToSet) == "string" then
+                            dataHierarchy[#pathArguments - 1][pathArguments[#pathArguments]] = tostring(valueToSet);
                         else
-                            v13[#v11 - 1][v11[#v11]] = v9;
+                            dataHierarchy[#pathArguments - 1][pathArguments[#pathArguments]] = valueToSet;
                         end;
-                        for v15 = #v11 - 1, 2, -1 do
-                            v13[v15 - 1][v11[v15]] = v13[v15];
+                        for reverseIndex = #pathArguments - 1, 2, -1 do
+                            dataHierarchy[reverseIndex - 1][pathArguments[reverseIndex]] = dataHierarchy[reverseIndex];
                         end;
                     else
                         return false;
                     end;
-                elseif #v11 == 1 then
-                    if type(v9) == "table" or getElementData(l_v0_0, v11[1]) ~= v9 then
-                        v12 = getElementData(l_v0_0, v11[1]);
-                        if v10 and getDataType(v12) == "parameter" then
-                            v13[1] = tostring(v9) .. string.sub(v12, string.find(v12, "|"), -1);
-                        elseif type(v9) == "string" then
-                            v13[1] = tostring(v9);
+                elseif #pathArguments == 1 then
+                    if type(valueToSet) == "table" or getElementData(serverTacticsRef, pathArguments[1]) ~= valueToSet then
+                        previousValue = getElementData(serverTacticsRef, pathArguments[1]);
+                        if mergeWithExisting and getDataType(previousValue) == "parameter" then
+                            dataHierarchy[1] = tostring(valueToSet) .. string.sub(previousValue, string.find(previousValue, "|"), -1);
+                        elseif type(valueToSet) == "string" then
+                            dataHierarchy[1] = tostring(valueToSet);
                         else
-                            v13[1] = v9;
+                            dataHierarchy[1] = valueToSet;
                         end;
                     else
                         return false;
@@ -101,154 +100,150 @@
                 else
                     return false;
                 end;
-                setElementData(l_v0_0, v11[1], v13[1]);
-                triggerEvent("onTacticsChange", root, v11, v12);
+                setElementData(serverTacticsRef, pathArguments[1], dataHierarchy[1]);
+                triggerEvent("onTacticsChange", root, pathArguments, previousValue);
                 return true;
             end;
             addEvent("onTacticsChange");
             addEvent("onSetTacticsData", true);
-            addEventHandler("onSetTacticsData", resourceRoot, function(v16, ...) --[[ Line: 101 ]]
+            addEventHandler("onSetTacticsData", resourceRoot, function(clientValue, ...) 
                 if hasObjectPermissionTo(client, "general.tactics_players") then
-                    setTacticsData(v16, ...);
+                    setTacticsData(clientValue, ...);
                 end
             end);
         end;
     else
-        local v17 = getElementByID("Tactics");
+        local clientTacticsElement = getElementByID("Tactics");
         do
-            local l_v17_0 = v17;
+            local clientTacticsRef = clientTacticsElement;
             initTacticsData = function()
-                local v19 = {};
-                local function v20(v21, v22, v23)
-                    for v24, v25 in pairs(v21) do
-                        v19[v23] = v24;
-                        if type(v25) == "table" and #v25 == 0 and type(next(v25)) == "string" then
-                            v20(v25, v22[v24] or {}, v23 + 1);
-                            v19[v23 + 1] = nil;
-                        elseif type(v22[v24]) == "table" or v25 ~= v22[v24] then
-                            triggerEvent("onClientTacticsChange", l_v17_0, v19, v22[v24]);
+                local currentPath = {};
+                local function compareTablesRecursive(newTable, oldTable, currentDepth)
+                    for tableKey, tableValue in pairs(newTable) do
+                        currentPath[currentDepth] = tableKey;
+                        if type(tableValue) == "table" and #tableValue == 0 and type(next(tableValue)) == "string" then
+                            compareTablesRecursive(tableValue, oldTable[tableKey] or {}, currentDepth + 1);
+                            currentPath[currentDepth + 1] = nil;
+                        elseif type(oldTable[tableKey]) == "table" or tableValue ~= oldTable[tableKey] then
+                            triggerEvent("onClientTacticsChange", clientTacticsRef, currentPath, oldTable[tableKey]);
                         end;
-                        v22[v24] = nil;
+                        oldTable[tableKey] = nil;
                     end;
-                    for v26, v27 in pairs(v22) do
-                        v19[v23] = v26;
-                        if type(v21[v26]) == "table" and #v21[v26] == 0 and type(next(v21[v26])) == "string" then
-                            v20(v21[v26], v27 or {}, v23 + 1);
-                            v19[v23 + 1] = nil;
-                        elseif type(v27) == "table" or v21[v26] ~= v27 then
-                            triggerEvent("onClientTacticsChange", l_v17_0, v19, v27);
+                    for remainingKey, remainingValue in pairs(oldTable) do
+                        currentPath[currentDepth] = remainingKey;
+                        if type(newTable[remainingKey]) == "table" and #newTable[remainingKey] == 0 and type(next(newTable[remainingKey])) == "string" then
+                            compareTablesRecursive(newTable[remainingKey], remainingValue or {}, currentDepth + 1);
+                            currentPath[currentDepth + 1] = nil;
+                        elseif type(remainingValue) == "table" or newTable[remainingKey] ~= remainingValue then
+                            triggerEvent("onClientTacticsChange", clientTacticsRef, currentPath, remainingValue);
                         end;
                     end;
                 end;
-                for _, v29 in ipairs(getAllTacticsData()) do
-                    local v30 = getElementData(l_v17_0, v29);
-                    v19[1] = v29;
-                    if type(v30) == "table" and #v30 == 0 and type(next(v30)) == "string" then
-                        v20(v30, {}, 2);
-                        v19[2] = nil;
+                for _, dataKey in ipairs(getAllTacticsData()) do
+                    local keyData = getElementData(clientTacticsRef, dataKey);
+                    currentPath[1] = dataKey;
+                    if type(keyData) == "table" and #keyData == 0 and type(next(keyData)) == "string" then
+                        compareTablesRecursive(keyData, {}, 2);
+                        currentPath[2] = nil;
                     else
-                        triggerEvent("onClientTacticsChange", l_v17_0, v19, nil);
+                        triggerEvent("onClientTacticsChange", clientTacticsRef, currentPath, nil);
                     end;
                 end;
             end;
             addEvent("onDownloadComplete");
             addEventHandler("onDownloadComplete", root, initTacticsData);
-            local function v43(v31, v32) --[[ Line: 142 ]]
-                local v33 = {};
-                local function v34(v35, v36, v37) --[[ Line: 144 ]]
-                    -- upvalues: v33 (ref), v34 (ref)
-                    for v38, v39 in pairs(v35) do
-                        v33[v37] = v38;
-                        if type(v39) == "table" and #v39 == 0 and type(next(v39)) == "string" then
-                            v34(v39, v36[v38] or {}, v37 + 1);
-                            v33[v37 + 1] = nil;
-                        elseif type(v36[v38]) == "table" or v39 ~= v36[v38] then
-                            triggerEvent("onClientTacticsChange", source, v33, v36[v38]);
+            local function handleElementDataChange(dataKey, oldData) 
+                local changePath = {};
+                local function processDataChange(changedTable, comparisonTable, processingDepth) 
+                    for changedKey, changedValue in pairs(changedTable) do
+                        changePath[processingDepth] = changedKey;
+                        if type(changedValue) == "table" and #changedValue == 0 and type(next(changedValue)) == "string" then
+                            processDataChange(changedValue, comparisonTable[changedKey] or {}, processingDepth + 1);
+                            changePath[processingDepth + 1] = nil;
+                        elseif type(comparisonTable[changedKey]) == "table" or changedValue ~= comparisonTable[changedKey] then
+                            triggerEvent("onClientTacticsChange", source, changePath, comparisonTable[changedKey]);
                         end;
-                        v36[v38] = nil;
+                        comparisonTable[changedKey] = nil;
                     end;
-                    for v40, v41 in pairs(v36) do
-                        v33[v37] = v40;
-                        if type(v35[v40]) == "table" and #v35[v40] == 0 and type(next(v35[v40])) == "string" then
-                            v34(v35[v40], v41 or {}, v37 + 1);
-                            v33[v37 + 1] = nil;
-                        elseif type(v41) == "table" or v35[v40] ~= v41 then
-                            triggerEvent("onClientTacticsChange", source, v33, v41);
+                    for comparisonKey, comparisonValue in pairs(comparisonTable) do
+                        changePath[processingDepth] = comparisonKey;
+                        if type(changedTable[comparisonKey]) == "table" and #changedTable[comparisonKey] == 0 and type(next(changedTable[comparisonKey])) == "string" then
+                            processDataChange(changedTable[comparisonKey], comparisonValue or {}, processingDepth + 1);
+                            changePath[processingDepth + 1] = nil;
+                        elseif type(comparisonValue) == "table" or changedTable[comparisonKey] ~= comparisonValue then
+                            triggerEvent("onClientTacticsChange", source, changePath, comparisonValue);
                         end;
                     end;
                 end;
-                local v42 = getElementData(source, v31);
-                v33[1] = v31;
-                if type(v42) == "table" and #v42 == 0 and type(next(v42)) == "string" then
-                    v34(v42, v32 or {}, 2);
-                    v33[2] = nil;
+                local elementDataValue = getElementData(source, dataKey);
+                changePath[1] = dataKey;
+                if type(elementDataValue) == "table" and #elementDataValue == 0 and type(next(elementDataValue)) == "string" then
+                    processDataChange(elementDataValue, oldData or {}, 2);
+                    changePath[2] = nil;
                 else
-                    triggerEvent("onClientTacticsChange", source, v33, v32);
+                    triggerEvent("onClientTacticsChange", source, changePath, oldData);
                 end;
             end;
             addEvent("onClientTacticsChange");
-            addEventHandler("onClientElementDataChange", l_v17_0, v43);
-            getAllTacticsData = function() --[[ Line: 176 ]]
-                -- upvalues: l_v17_0 (ref)
-                return getElementData(l_v17_0, "AllData") or {};
+            addEventHandler("onClientElementDataChange", clientTacticsRef, handleElementDataChange);
+            getAllTacticsData = function() 
+                return getElementData(clientTacticsRef, "AllData") or {};
             end;
-            getTacticsData = function(...) --[[ Line: 179 ]]
-                -- upvalues: l_v17_0 (ref)
-                local v44 = true;
-                local v45 = {...};
-                if type(v45[#v45]) == "boolean" then
-                    v44 = table.remove(v45);
+            getTacticsData = function(...) 
+                local parseDataFlag = true;
+                local clientArgs = {...};
+                if type(clientArgs[#clientArgs]) == "boolean" then
+                    parseDataFlag = table.remove(clientArgs);
                 end;
-                if #v45 == 1 then
-                    local v46 = getElementData(l_v17_0, v45[1]);
-                    if v44 and type(v46) == "string" and string.find(v46, "|") then
-                        return gettok(v46, 1, string.byte("|")), split(gettok(v46, 2, string.byte("|")), ",");
+                if #clientArgs == 1 then
+                    local clientData = getElementData(clientTacticsRef, clientArgs[1]);
+                    if parseDataFlag and type(clientData) == "string" and string.find(clientData, "|") then
+                        return gettok(clientData, 1, string.byte("|")), split(gettok(clientData, 2, string.byte("|")), ",");
                     else
-                        return v46;
+                        return clientData;
                     end;
-                elseif #v45 > 1 then
-                    local v47 = nil;
-                    for v48, v49 in ipairs(v45) do
-                        if v48 == 1 then
-                            v47 = getElementData(l_v17_0, v49);
+                elseif #clientArgs > 1 then
+                    local nestedClientData = nil;
+                    for argIndex, argValue in ipairs(clientArgs) do
+                        if argIndex == 1 then
+                            nestedClientData = getElementData(clientTacticsRef, argValue);
                         else
-                            v47 = v47[v49];
+                            nestedClientData = nestedClientData[argValue];
                         end;
-                        if not v47 then
+                        if not nestedClientData then
                             return nil;
                         end;
                     end;
-                    if v44 and type(v47) == "string" and string.find(v47, "|") then
-                        return gettok(v47, 1, string.byte("|")), split(gettok(v47, 2, string.byte("|")), ",");
+                    if parseDataFlag and type(nestedClientData) == "string" and string.find(nestedClientData, "|") then
+                        return gettok(nestedClientData, 1, string.byte("|")), split(gettok(nestedClientData, 2, string.byte("|")), ",");
                     else
-                        return v47;
+                        return nestedClientData;
                     end;
                 else
                     return nil;
                 end;
             end;
-            getDataType = function(v50) --[[ Line: 208 ]]
-                if type(v50) == "string" then
-                    if string.find(v50, "|") then
+            getDataType = function(inputData) 
+                if type(inputData) == "string" then
+                    if string.find(inputData, "|") then
                         return "parameter";
-                    elseif string.find(v50, ":") then
+                    elseif string.find(inputData, ":") then
                         return "time";
-                    elseif v50 == "true" or v50 == "false" then
+                    elseif inputData == "true" or inputData == "false" then
                         return "toggle";
                     end;
                 end;
-                return type(v50);
+                return type(inputData);
             end;
-            setTacticsData = function(v51, ...) --[[ Line: 216 ]]
-                -- upvalues: l_v17_0 (ref)
-                triggerServerEvent("onSetTacticsData", resourceRoot, v51, ...);
+            setTacticsData = function(valueForServer, ...) 
+                triggerServerEvent("onSetTacticsData", resourceRoot, valueForServer, ...);
             end;
         end;
     end;
     if triggerServerEvent ~= nil then
-        local v52, v53 = guiGetScreenSize();
-        yscreen = v53;
-        xscreen = v52;
+        local screenWidth, screenHeight = guiGetScreenSize();
+        yscreen = screenHeight;
+        xscreen = screenWidth;
         white = tocolor(255, 255, 255);
         whiteC0 = tocolor(255, 255, 255, 192);
         silver = tocolor(225, 225, 225);
@@ -259,114 +254,114 @@
         blueC0 = tocolor(0, 192, 255, 192);
         darkblueC0 = tocolor(0, 96, 128, 192);
         greyE1 = tocolor(192, 192, 192, 225);
-        setCameraPrepair = function(v54, v55, v56, v57) --[[ Line: 233 ]]
-            if not v55 or not v56 or not v57 then
-                local v58 = getElementsByType("Central_Marker")[1];
-                if isElement(v58) then
-                    local v59, v60, v61 = getElementPosition(v58);
-                    v57 = v61;
-                    v56 = v60;
-                    v55 = v59;
+        setCameraPrepair = function(cameraHeight, cameraX, cameraY, cameraZ) 
+            if not cameraX or not cameraY or not cameraZ then
+                local centralMarker = getElementsByType("Central_Marker")[1];
+                if isElement(centralMarker) then
+                    local markerX, markerY, markerZ = getElementPosition(centralMarker);
+                    cameraZ = markerZ;
+                    cameraY = markerY;
+                    cameraX = markerX;
                 else
-                    local v62, v63, v64 = getElementPosition(localPlayer);
-                    v57 = v64;
-                    v56 = v63;
-                    v55 = v62;
+                    local playerX, playerY, playerZ = getElementPosition(localPlayer);
+                    cameraZ = playerZ;
+                    cameraY = playerY;
+                    cameraX = playerX;
                 end;
             end;
-            if not v54 then
-                v54 = 70;
+            if not cameraHeight then
+                cameraHeight = 70;
             end;
-            setCameraMatrix(v55, v56, v57, v55, v56, v57 + v54);
-            setElementData(localPlayer, "Prepair", {v55, v56, v57, v54}, false);
+            setCameraMatrix(cameraX, cameraY, cameraZ, cameraX, cameraY, cameraZ + cameraHeight);
+            setElementData(localPlayer, "Prepair", {cameraX, cameraY, cameraZ, cameraHeight}, false);
             return true;
         end;
-        stopCameraPrepair = function() --[[ Line: 247 ]]
+        stopCameraPrepair = function() 
             if setElementData(localPlayer, "Prepair", nil, false) then
                 setCameraTarget(localPlayer);
             end;
         end;
-        getFont = function(v65) --[[ Line: 252 ]]
-            return tonumber(0.015 * v65 * yscreen / 9);
+        getFont = function(fontSize) 
+            return tonumber(0.015 * fontSize * yscreen / 9);
         end;
-        getPlayerLanguage = function() --[[ Line: 255 ]]
+        getPlayerLanguage = function() 
             if not isElement(config_gameplay_language) then
                 return "language/english.lng";
             else
-                local v66 = guiGetText(config_gameplay_language);
-                return v66 and config_gameplay_languagelist[v66] or "language/english.lng";
+                local selectedLanguage = guiGetText(config_gameplay_language);
+                return selectedLanguage and config_gameplay_languagelist[selectedLanguage] or "language/english.lng";
             end;
         end;
-        setPlayerLanguage = function(v67) --[[ Line: 260 ]]
-            if config_gameplay_languagelist[guiGetText(config_gameplay_language)] == v67 then
+        setPlayerLanguage = function(languageFile) 
+            if config_gameplay_languagelist[guiGetText(config_gameplay_language)] == languageFile then
                 return false;
             else
-                local v68 = xmlLoadFile(v67);
-                if v68 then
+                local languageXML = xmlLoadFile(languageFile);
+                if languageXML then
                     loadedLanguage = {};
-                    local v69 = xmlNodeGetAttribute(v68, "name") or "";
-                    local v70 = xmlNodeGetAttribute(v68, "author") or "";
-                    outputChatBox(v69 .. " (" .. v70 .. ")", 255, 100, 100, true);
-                    for _, v72 in ipairs(xmlNodeGetChildren(v68)) do
-                        loadedLanguage[xmlNodeGetName(v72)] = xmlNodeGetAttribute(v72, "string");
+                    local languageName = xmlNodeGetAttribute(languageXML, "name") or "";
+                    local languageAuthor = xmlNodeGetAttribute(languageXML, "author") or "";
+                    outputChatBox(languageName .. " (" .. languageAuthor .. ")", 255, 100, 100, true);
+                    for _, languageNode in ipairs(xmlNodeGetChildren(languageXML)) do
+                        loadedLanguage[xmlNodeGetName(languageNode)] = xmlNodeGetAttribute(languageNode, "string");
                     end;
-                    xmlUnloadFile(v68);
-                    local v73 = xmlFindChild(_client, "gameplay", 0);
-                    xmlNodeSetAttribute(v73, "language", v67);
+                    xmlUnloadFile(languageXML);
+                    local gameplayNode = xmlFindChild(_client, "gameplay", 0);
+                    xmlNodeSetAttribute(gameplayNode, "language", languageFile);
                     xmlSaveFile(_client);
-                    if not config_gameplay_languagelist[v67] then
-                        config_gameplay_languagelist[v67] = v69;
+                    if not config_gameplay_languagelist[languageFile] then
+                        config_gameplay_languagelist[languageFile] = languageName;
                     end;
-                    if not config_gameplay_languagelist[v69] then
-                        config_gameplay_languagelist[v69] = v67;
+                    if not config_gameplay_languagelist[languageName] then
+                        config_gameplay_languagelist[languageName] = languageFile;
                     end;
-                    guiSetText(config_gameplay_language, v69);
-                    triggerEvent("onClientLanguageChange", localPlayer, v67);
+                    guiSetText(config_gameplay_language, languageName);
+                    triggerEvent("onClientLanguageChange", localPlayer, languageFile);
                     return true;
                 else
                     return false;
                 end;
             end;
         end;
-        getLanguageString = function(v74) --[[ Line: 283 ]]
+        getLanguageString = function(stringKey) 
             if type(loadedLanguage) ~= "table" then
                 loadedLanguage = {};
-                local v75 = getPlayerLanguage();
-                local v76 = xmlLoadFile(v75);
-                if v76 then
-                    for _, v78 in ipairs(xmlNodeGetChildren(v76)) do
-                        loadedLanguage[xmlNodeGetName(v78)] = xmlNodeGetAttribute(v78, "string");
+                local currentLanguageFile = getPlayerLanguage();
+                local languageFileXML = xmlLoadFile(currentLanguageFile);
+                if languageFileXML then
+                    for _, stringNode in ipairs(xmlNodeGetChildren(languageFileXML)) do
+                        loadedLanguage[xmlNodeGetName(stringNode)] = xmlNodeGetAttribute(stringNode, "string");
                     end;
-                    xmlUnloadFile(v76);
+                    xmlUnloadFile(languageFileXML);
                 end;
             end;
-            return loadedLanguage[tostring(v74)] or "";
+            return loadedLanguage[tostring(stringKey)] or "";
         end;
-        outputLangString = function(v79, ...) --[[ Line: 297 ]]
-            local v80 = {...};
-            if #v80 > 0 then
-                outputChatBox(string.format(getLanguageString(tostring(v79)), unpack(v80)), 255, 100, 100, true);
+        outputLangString = function(outputStringKey, ...) 
+            local formatArgs = {...};
+            if #formatArgs > 0 then
+                outputChatBox(string.format(getLanguageString(tostring(outputStringKey)), unpack(formatArgs)), 255, 100, 100, true);
             else
-                outputChatBox(getLanguageString(tostring(v79)), 255, 100, 100, true);
+                outputChatBox(getLanguageString(tostring(outputStringKey)), 255, 100, 100, true);
             end;
         end;
-        isAllGuiHidden = function() --[[ Line: 305 ]]
+        isAllGuiHidden = function() 
             if getElementData(localPlayer, "Status") == "Joining" then
                 return false;
             else
-                for _, v82 in ipairs(getElementsByType("gui-window", resourceRoot)) do
-                    if guiGetVisible(v82) and v82 ~= voting_window then
+                for _, guiWindow in ipairs(getElementsByType("gui-window", resourceRoot)) do
+                    if guiGetVisible(guiWindow) and guiWindow ~= voting_window then
                         return false;
                     end;
                 end;
                 return true;
             end;
         end;
-        isRoundPaused = function() --[[ Line: 312 ]]
+        isRoundPaused = function() 
             if getTacticsData("Pause") then
-                local v83 = getTacticsData("Unpause");
-                if v83 then
-                    return true, v83 - (getTickCount() + addTickCount);
+                local unpauseTime = getTacticsData("Unpause");
+                if unpauseTime then
+                    return true, unpauseTime - (getTickCount() + addTickCount);
                 else
                     return true;
                 end;
@@ -375,129 +370,129 @@
             end;
         end;
         voiceThread = {};
-        playVoice = function(v84, v85, v86, v87) --[[ Line: 324 ]]
+        playVoice = function(voiceFile, voiceLoop, voiceVolume, voiceSpeed) 
             if not guiCheckBoxGetSelected(config_audio_voice) then
                 return false;
-            elseif isElement(voiceThread[v84]) then
-                return voiceThread[v84];
+            elseif isElement(voiceThread[voiceFile]) then
+                return voiceThread[voiceFile];
             else
-                voiceThread[v84] = playSound(v84, v85 or false);
-                if not v86 then
-                    v86 = 0.01 * guiScrollBarGetScrollPosition(config_audio_voicevol);
+                voiceThread[voiceFile] = playSound(voiceFile, voiceLoop or false);
+                if not voiceVolume then
+                    voiceVolume = 0.01 * guiScrollBarGetScrollPosition(config_audio_voicevol);
                 else
-                    v86 = math.min(v86, 0.01 * guiScrollBarGetScrollPosition(config_audio_voicevol));
+                    voiceVolume = math.min(voiceVolume, 0.01 * guiScrollBarGetScrollPosition(config_audio_voicevol));
                 end;
-                setSoundVolume(voiceThread[v84], v86);
-                setSoundSpeed(voiceThread[v84], v87 or 1);
-                return voiceThread[v84];
+                setSoundVolume(voiceThread[voiceFile], voiceVolume);
+                setSoundSpeed(voiceThread[voiceFile], voiceSpeed or 1);
+                return voiceThread[voiceFile];
             end;
         end;
         musicThread = {};
-        playMusic = function(v88, v89, v90) --[[ Line: 334 ]]
+        playMusic = function(musicFile, musicLoop, musicVolume) 
             if not guiCheckBoxGetSelected(config_audio_voice) then
                 return false;
-            elseif isElement(musicThread[v88]) then
-                return musicThread[v88];
+            elseif isElement(musicThread[musicFile]) then
+                return musicThread[musicFile];
             else
-                musicThread[v88] = playSound(v88, v89 or false);
-                if not v90 then
-                    v90 = 0.01 * guiScrollBarGetScrollPosition(config_audio_musicvol);
+                musicThread[musicFile] = playSound(musicFile, musicLoop or false);
+                if not musicVolume then
+                    musicVolume = 0.01 * guiScrollBarGetScrollPosition(config_audio_musicvol);
                 else
-                    v90 = math.min(v90, 0.01 * guiScrollBarGetScrollPosition(config_audio_musicvol));
+                    musicVolume = math.min(musicVolume, 0.01 * guiScrollBarGetScrollPosition(config_audio_musicvol));
                 end;
-                setSoundVolume(musicThread[v88], not v90 and 1 or v90);
-                setSoundSpeed(musicThread[v88], speed or 1);
-                return musicThread[v88];
+                setSoundVolume(musicThread[musicFile], not musicVolume and 1 or musicVolume);
+                setSoundSpeed(musicThread[musicFile], speed or 1);
+                return musicThread[musicFile];
             end;
         end;
-        getAngleBetweenPoints2D = function(v91, v92, v93, v94) --[[ Line: 343 ]]
-            local v95 = 0 - math.deg(math.atan2(v93 - v91, v94 - v92));
-            if v95 < 0 then
-                v95 = v95 + 360;
+        getAngleBetweenPoints2D = function(x1, y1, x2, y2) 
+            local calculatedAngle = 0 - math.deg(math.atan2(x2 - x1, y2 - y1));
+            if calculatedAngle < 0 then
+                calculatedAngle = calculatedAngle + 360;
             end;
-            return v95;
+            return calculatedAngle;
         end;
-        getAngleBetweenAngles2D = function(v96, v97) --[[ Line: 348 ]]
-            local v98;
-            if v96 < v97 then
-                if v96 < v97 - 180 then
-                    v98 = v96 - (v97 - 360);
+        getAngleBetweenAngles2D = function(angle1, angle2) 
+            local angleDifference;
+            if angle1 < angle2 then
+                if angle1 < angle2 - 180 then
+                    angleDifference = angle1 - (angle2 - 360);
                 else
-                    v98 = v96 - v97;
+                    angleDifference = angle1 - angle2;
                 end;
-            elseif v97 + 180 < v96 then
-                v98 = v96 - (v97 + 360);
+            elseif angle2 + 180 < angle1 then
+                angleDifference = angle1 - (angle2 + 360);
             else
-                v98 = v96 - v97;
+                angleDifference = angle1 - angle2;
             end;
-            return v98;
+            return angleDifference;
         end;
         replaceCustom = {};
-        loadCustomObject = function(v99, v100, v101) --[[ Line: 366 ]]
-            local v102 = {model = v99};
-            local v103 = false;
-            if v100 then
-                v102.txd = engineLoadTXD(v100);
-                v103 = engineImportTXD(v102.txd, v99);
+        loadCustomObject = function(objectModel, textureFile, modelFile) 
+            local customObject = {model = objectModel};
+            local importSuccess = false;
+            if textureFile then
+                customObject.txd = engineLoadTXD(textureFile);
+                importSuccess = engineImportTXD(customObject.txd, objectModel);
             end;
-            if v101 then
-                v102.dff = engineLoadDFF(v101, v99);
-                v103 = engineReplaceModel(v102.dff, v99);
+            if modelFile then
+                customObject.dff = engineLoadDFF(modelFile, objectModel);
+                importSuccess = engineReplaceModel(customObject.dff, objectModel);
             end;
-            if v103 then
-                table.insert(replaceCustom, v102);
+            if importSuccess then
+                table.insert(replaceCustom, customObject);
             end;
-            return v103;
+            return importSuccess;
         end;
-        addEventHandler("onClientMapStopping", root, function() --[[ Line: 380 ]]
-            for _, v105 in ipairs(replaceCustom) do
-                if v105.txd and isElement(v105.txd) then
-                    destroyElement(v105.txd);
+        addEventHandler("onClientMapStopping", root, function() 
+            for _, customObjectEntry in ipairs(replaceCustom) do
+                if customObjectEntry.txd and isElement(customObjectEntry.txd) then
+                    destroyElement(customObjectEntry.txd);
                 end;
-                if v105.dff and isElement(v105.dff) then
-                    destroyElement(v105.dff);
-                    engineRestoreModel(v105.model);
+                if customObjectEntry.dff and isElement(customObjectEntry.dff) then
+                    destroyElement(customObjectEntry.dff);
+                    engineRestoreModel(customObjectEntry.model);
                 end;
             end;
             replaceCustom = {};
         end);
-        getElementVector = function(v106, v107, v108, v109, v110) --[[ Line: 392 ]]
-            if not isElement(v106) then
+        getElementVector = function(targetElement, offsetX, offsetY, offsetZ, relativeOffset) 
+            if not isElement(targetElement) then
                 return false;
             else
-                local v111 = getElementMatrix(v106);
-                local v112 = {};
-                if not v110 then
-                    v112[1] = v107 * v111[1][1] + v108 * v111[2][1] + v109 * v111[3][1] + v111[4][1];
-                    v112[2] = v107 * v111[1][2] + v108 * v111[2][2] + v109 * v111[3][2] + v111[4][2];
-                    v112[3] = v107 * v111[1][3] + v108 * v111[2][3] + v109 * v111[3][3] + v111[4][3];
+                local elementMatrix = getElementMatrix(targetElement);
+                local resultVector = {};
+                if not relativeOffset then
+                    resultVector[1] = offsetX * elementMatrix[1][1] + offsetY * elementMatrix[2][1] + offsetZ * elementMatrix[3][1] + elementMatrix[4][1];
+                    resultVector[2] = offsetX * elementMatrix[1][2] + offsetY * elementMatrix[2][2] + offsetZ * elementMatrix[3][2] + elementMatrix[4][2];
+                    resultVector[3] = offsetX * elementMatrix[1][3] + offsetY * elementMatrix[2][3] + offsetZ * elementMatrix[3][3] + elementMatrix[4][3];
                 else
-                    v112[1] = v107 * v111[1][1] + v108 * v111[2][1] + v109 * v111[3][1];
-                    v112[2] = v107 * v111[1][2] + v108 * v111[2][2] + v109 * v111[3][2];
-                    v112[3] = v107 * v111[1][3] + v108 * v111[2][3] + v109 * v111[3][3];
+                    resultVector[1] = offsetX * elementMatrix[1][1] + offsetY * elementMatrix[2][1] + offsetZ * elementMatrix[3][1];
+                    resultVector[2] = offsetX * elementMatrix[1][2] + offsetY * elementMatrix[2][2] + offsetZ * elementMatrix[3][2];
+                    resultVector[3] = offsetX * elementMatrix[1][3] + offsetY * elementMatrix[2][3] + offsetZ * elementMatrix[3][3];
                 end;
-                return v112;
+                return resultVector;
             end;
         end;
-        callServerFunction = function(v113, ...) --[[ Line: 407 ]]
-            local v114 = {...};
-            if v114[1] then
-                for v115, v116 in next, v114 do
-                    if type(v116) == "number" then
-                        v114[v115] = tostring(v116);
+        callServerFunction = function(functionName, ...) 
+            local functionArgs = {...};
+            if functionArgs[1] then
+                for argPosition, argItem in next, functionArgs do
+                    if type(argItem) == "number" then
+                        functionArgs[argPosition] = tostring(argItem);
                     end;
                 end;
             end;
-            triggerServerEvent("onClientCallsServerFunction", root, v113, unpack(v114));
+            triggerServerEvent("onClientCallsServerFunction", root, functionName, unpack(functionArgs));
         end;
-        callClientFunction = function(v117, ...) --[[ Line: 416 ]]
-            local v118 = {...};
-            if v118[1] then
-                for v119, v120 in next, v118 do
-                    v118[v119] = tonumber(v120) or v120;
+        callClientFunction = function(clientFunction, ...) 
+            local clientArgs = {...};
+            if clientArgs[1] then
+                for clientArgIndex, clientArgValue in next, clientArgs do
+                    clientArgs[clientArgIndex] = tonumber(clientArgValue) or clientArgValue;
                 end;
             end;
-            loadstring("return " .. v117)()(unpack(v118));
+            loadstring("return " .. clientFunction)()(unpack(clientArgs));
         end;
         addEvent("onServerCallsClientFunction", true);
         addEventHandler("onServerCallsClientFunction", root, callClientFunction);
@@ -505,60 +500,60 @@
         addEvent("onOutputLangString", true);
         addEventHandler("onOutputLangString", root, outputLangString);
     else
-        outputLangString = function(v121, v122, ...) --[[ Line: 429 ]]
-            triggerClientEvent(v121, "onOutputLangString", root, v122, ...);
+        outputLangString = function(targetPlayer, langStringKey, ...) 
+            triggerClientEvent(targetPlayer, "onOutputLangString", root, langStringKey, ...);
         end;
-        getString = function(v123) --[[ Line: 440 ]]
+        getString = function(serverStringKey) 
             if not serverLanguage then
                 serverLanguage = {};
-                local v124 = xmlLoadFile("language/english.lng");
-                if v124 then
-                    for _, v126 in ipairs(xmlNodeGetChildren(v124)) do
-                        serverLanguage[xmlNodeGetName(v126)] = xmlNodeGetAttribute(v126, "string");
+                local serverLanguageXML = xmlLoadFile("language/english.lng");
+                if serverLanguageXML then
+                    for _, serverStringNode in ipairs(xmlNodeGetChildren(serverLanguageXML)) do
+                        serverLanguage[xmlNodeGetName(serverStringNode)] = xmlNodeGetAttribute(serverStringNode, "string");
                     end;
                 end;
             end;
-            return serverLanguage[tostring(v123)] or "";
+            return serverLanguage[tostring(serverStringKey)] or "";
         end;
-        setCameraPrepair = function(v127, v128, v129, v130, v131) --[[ Line: 452 ]]
-            if not v129 or not v130 or not v131 then
-                local v132 = getElementsByType("Central_Marker")[1];
-                if isElement(v132) then
-                    local v133, v134, v135 = getElementPosition(v132);
-                    v131 = v135;
-                    v130 = v134;
-                    v129 = v133;
+        setCameraPrepair = function(playerElement, prepairHeight, prepairX, prepairY, prepairZ) 
+            if not prepairX or not prepairY or not prepairZ then
+                local serverCentralMarker = getElementsByType("Central_Marker")[1];
+                if isElement(serverCentralMarker) then
+                    local serverMarkerX, serverMarkerY, serverMarkerZ = getElementPosition(serverCentralMarker);
+                    prepairZ = serverMarkerZ;
+                    prepairY = serverMarkerY;
+                    prepairX = serverMarkerX;
                 else
-                    local v136, v137, v138 = getElementPosition(v127);
-                    v131 = v138;
-                    v130 = v137;
-                    v129 = v136;
+                    local serverPlayerX, serverPlayerY, serverPlayerZ = getElementPosition(playerElement);
+                    prepairZ = serverPlayerZ;
+                    prepairY = serverPlayerY;
+                    prepairX = serverPlayerX;
                 end;
             end;
-            if not v128 then
-                v128 = 70;
+            if not prepairHeight then
+                prepairHeight = 70;
             end;
-            setCameraMatrix(v127, v129, v130, v131, v129, v130, v131 + v128);
-            setElementData(v127, "Prepair", {v129, v130, v131, v128});
+            setCameraMatrix(playerElement, prepairX, prepairY, prepairZ, prepairX, prepairY, prepairZ + prepairHeight);
+            setElementData(playerElement, "Prepair", {prepairX, prepairY, prepairZ, prepairHeight});
         end;
-        stopCameraPrepair = function(v139) --[[ Line: 465 ]]
-            if setElementData(v139, "Prepair", nil) then
-                setCameraTarget(v139, v139);
+        stopCameraPrepair = function(playerToStop) 
+            if setElementData(playerToStop, "Prepair", nil) then
+                setCameraTarget(playerToStop, playerToStop);
             end;
         end;
-        setCameraSpectating = function(v140, ...) --[[ Line: 470 ]]
-            if v140 and isElement(v140) then
-                callClientFunction(v140, "setCameraSpectating", ...);
+        setCameraSpectating = function(spectatePlayer, ...) 
+            if spectatePlayer and isElement(spectatePlayer) then
+                callClientFunction(spectatePlayer, "setCameraSpectating", ...);
                 return true;
             else
                 return false;
             end;
         end;
-        isRoundPaused = function() --[[ Line: 477 ]]
+        isRoundPaused = function() 
             if getTacticsData("Pause") then
-                local v141 = getTacticsData("Unpause");
-                if v141 then
-                    return true, v141 - getTickCount();
+                local serverUnpauseTime = getTacticsData("Unpause");
+                if serverUnpauseTime then
+                    return true, serverUnpauseTime - getTickCount();
                 else
                     return true;
                 end;
@@ -566,28 +561,28 @@
                 return false;
             end;
         end;
-        createMapVehicle = function(v142, v143, v144, v145, v146, v147, v148) --[[ Line: 488 ]]
-            local v149 = createVehicle(v142, v143, v144, v145, v146, v147, v148);
-            setElementParent(v149, getRoundMapDynamicRoot());
-            return v149;
+        createMapVehicle = function(vehicleModel, vehicleX, vehicleY, vehicleZ, vehicleRotX, vehicleRotY, vehicleRotZ) 
+            local createdVehicle = createVehicle(vehicleModel, vehicleX, vehicleY, vehicleZ, vehicleRotX, vehicleRotY, vehicleRotZ);
+            setElementParent(createdVehicle, getRoundMapDynamicRoot());
+            return createdVehicle;
         end;
 
-        callClientFunction = function(v150, v151, ...)
-            if not v150 or (type(v150) ~= "table" and not isElement(v150) and v150 ~= root and v150 ~= getRootElement()) then
+        callClientFunction = function(targetElementOrTable, serverFunctionName, ...)
+            if not targetElementOrTable or (type(targetElementOrTable) ~= "table" and not isElement(targetElementOrTable) and targetElementOrTable ~= root and targetElementOrTable ~= getRootElement()) then
                 return false;
             end;
-            if not v151 or type(v151) ~= "string" or v151 == "" then
+            if not serverFunctionName or type(serverFunctionName) ~= "string" or serverFunctionName == "" then
                 return false;
             end;   
-            local v152 = {...};
-            if v152[1] then
-                for v153, v154 in next, v152 do
-                    if type(v154) == "number" then
-                        v152[v153] = tostring(v154);
+            local serverFunctionArgs = {...};
+            if serverFunctionArgs[1] then
+                for serverArgIndex, serverArgValue in next, serverFunctionArgs do
+                    if type(serverArgValue) == "number" then
+                        serverFunctionArgs[serverArgIndex] = tostring(serverArgValue);
                     end;
                 end;
             end;  
-            local sourceElement = v150;
+            local sourceElement = targetElementOrTable;
             if type(sourceElement) == "table" then
                 for _, element in pairs(sourceElement) do
                     if isElement(element) then
@@ -600,7 +595,7 @@
                 end;
             end;  
             local success, result = pcall(function()
-                return triggerClientEvent(v150, "onServerCallsClientFunction", sourceElement, v151, unpack(v152 or {}));
+                return triggerClientEvent(targetElementOrTable, "onServerCallsClientFunction", sourceElement, serverFunctionName, unpack(serverFunctionArgs or {}));
             end);
             if not success then
                 return false;
@@ -724,81 +719,81 @@
         addEvent("onClientCallsServerFunction", true)
         addEventHandler("onClientCallsServerFunction", resourceRoot, callServerFunction)
     end;
-    getRoundMapRoot = function(v159) --[[ Line: 512 ]]
-        if v159 then
-            return getResourceRootElement(v159);
+    getRoundMapRoot = function(mapResource) 
+        if mapResource then
+            return getResourceRootElement(mapResource);
         else
-            local v160 = getResourceFromName(getTacticsData("MapResName"));
-            if v160 then
-                return getResourceRootElement(v160);
+            local currentMapResource = getResourceFromName(getTacticsData("MapResName"));
+            if currentMapResource then
+                return getResourceRootElement(currentMapResource);
             else
                 return root;
             end;
         end;
     end;
-    getRoundMapDynamicRoot = function(v161) --[[ Line: 521 ]]
-        if v161 then
-            return getResourceDynamicElementRoot(v161);
+    getRoundMapDynamicRoot = function(dynamicMapResource) 
+        if dynamicMapResource then
+            return getResourceDynamicElementRoot(dynamicMapResource);
         else
-            local v162 = getResourceFromName(getTacticsData("MapResName"));
-            if v162 then
-                return getResourceDynamicElementRoot(v162);
+            local currentDynamicMapResource = getResourceFromName(getTacticsData("MapResName"));
+            if currentDynamicMapResource then
+                return getResourceDynamicElementRoot(currentDynamicMapResource);
             else
                 return root;
             end;
         end;
     end;
-    removeColorCoding = function(v163) --[[ Line: 530 ]]
-        return type(v163) == "string" and string.gsub(v163, "#%x%x%x%x%x%x", "") or v163;
+    removeColorCoding = function(textToClean) 
+        return type(textToClean) == "string" and string.gsub(textToClean, "#%x%x%x%x%x%x", "") or textToClean;
     end;
-    TimeToSec = function(v164) --[[ Line: 533 ]]
-        if not string.find(tostring(v164), ":") then
+    TimeToSec = function(timeString) 
+        if not string.find(tostring(timeString), ":") then
             return false;
         else
-            local v165 = split(tostring(v164), string.byte(":"));
-            local v166 = tonumber(v165[#v165 - 2]) or 0;
-            local v167 = tonumber(v165[#v165 - 1]) or 0;
-            local v168 = tonumber(v165[#v165]);
-            return 3600 * v166 + 60 * v167 + v168;
+            local timeParts = split(tostring(timeString), string.byte(":"));
+            local hours = tonumber(timeParts[#timeParts - 2]) or 0;
+            local minutes = tonumber(timeParts[#timeParts - 1]) or 0;
+            local seconds = tonumber(timeParts[#timeParts]);
+            return 3600 * hours + 60 * minutes + seconds;
         end;
     end;
-    MSecToTime = function(v169, v170) --[[ Line: 541 ]]
-        if type(v169) ~= "number" then
+    MSecToTime = function(milliseconds, decimalPlaces) 
+        if type(milliseconds) ~= "number" then
             return false;
         else
-            if type(v170) ~= "number" then
-                v170 = 1;
+            if type(decimalPlaces) ~= "number" then
+                decimalPlaces = 1;
             end;
-            local v171 = math.floor(v169 / 3600000) or 0;
-            local v172 = math.floor(v169 / 60000) - v171 * 60 or 0;
-            local v173 = math.floor(v169 / 1000) - v172 * 60 - v171 * 3600 or 0;
-            local v174 = v169 - v173 * 1000 - v172 * 60000 - v171 * 3600000 or 0;
-            local v175 = string.format("%02i", v173);
-            if v171 > 0 then
-                v175 = string.format("%i:%02i:", v171, v172) .. v175;
+            local timeHours = math.floor(milliseconds / 3600000) or 0;
+            local timeMinutes = math.floor(milliseconds / 60000) - timeHours * 60 or 0;
+            local timeSeconds = math.floor(milliseconds / 1000) - timeMinutes * 60 - timeHours * 3600 or 0;
+            local timeMilliseconds = milliseconds - timeSeconds * 1000 - timeMinutes * 60000 - timeHours * 3600000 or 0;
+            local formattedTime = string.format("%02i", timeSeconds);
+            if timeHours > 0 then
+                formattedTime = string.format("%i:%02i:", timeHours, timeMinutes) .. formattedTime;
             else
-                v175 = string.format("%i:", v172) .. v175;
+                formattedTime = string.format("%i:", timeMinutes) .. formattedTime;
             end;
-            if v170 > 0 then
-                local v176 = string.sub(string.format("%." .. v170 .. "f", 0.001 * v174), 2);
-                if #v176 - 1 < v170 then
-                    v176 = v176 .. string.rep("0", v170 - (#v176 - 1));
+            if decimalPlaces > 0 then
+                local millisecondString = string.sub(string.format("%." .. decimalPlaces .. "f", 0.001 * timeMilliseconds), 2);
+                if #millisecondString - 1 < decimalPlaces then
+                    millisecondString = millisecondString .. string.rep("0", decimalPlaces - (#millisecondString - 1));
                 end;
-                v175 = v175 .. v176;
+                formattedTime = formattedTime .. millisecondString;
             end;
-            return v175;
+            return formattedTime;
         end;
     end;
-    string.count = function(v177, v178) --[[ Line: 563 ]]
-        local v179 = 0;
-        local v180 = string.find(v177, v178);
-        while v180 do
-            v179 = v179 + 1;
-            v180 = string.find(v177, v178, v180 + 1);
+    string.count = function(mainString, subString) 
+        local occurrenceCount = 0;
+        local foundPosition = string.find(mainString, subString);
+        while foundPosition do
+            occurrenceCount = occurrenceCount + 1;
+            foundPosition = string.find(mainString, subString, foundPosition + 1);
         end;
-        return v179;
+        return occurrenceCount;
     end;
-    getRoundMapInfo = function() --[[ Line: 572 ]]
+    getRoundMapInfo = function() 
         return {
             modename = getTacticsData("Map"), 
             name = getTacticsData("MapName") or "unnamed", 
@@ -807,43 +802,43 @@
             mapnext = getTacticsData("ResourceNext")
         };
     end;
-    getRoundModeSettings = function(...) --[[ Line: 581 ]]
-        local v181 = {...};
-        local v182 = getTacticsData("Map");
-        local v183 = {getTacticsData("modes", v182, unpack(v181))};
-        if v183[1] then
-            return unpack(v183);
+    getRoundModeSettings = function(...) 
+        local modeArgs = {...};
+        local currentMode = getTacticsData("Map");
+        local modeSettings = {getTacticsData("modes", currentMode, unpack(modeArgs))};
+        if modeSettings[1] then
+            return unpack(modeSettings);
         else
-            return getTacticsData(unpack(v181));
+            return getTacticsData(unpack(modeArgs));
         end;
     end;
-    getUnreadyPlayers = function() --[[ Line: 590 ]]
-        local v184 = {};
-        for _, v186 in ipairs(getElementsByType("player")) do
-            if getElementData(v186, "Loading") and getElementData(v186, "Status") == "Play" then
-                table.insert(v184, v186);
+    getUnreadyPlayers = function() 
+        local unreadyPlayers = {};
+        for _, playerElement in ipairs(getElementsByType("player")) do
+            if getElementData(playerElement, "Loading") and getElementData(playerElement, "Status") == "Play" then
+                table.insert(unreadyPlayers, playerElement);
             end;
         end;
-        if #v184 > 1 then
-            return v184;
+        if #unreadyPlayers > 1 then
+            return unreadyPlayers;
         else
-            return v184[1] or false;
+            return unreadyPlayers[1] or false;
         end;
     end;
-    getPlayerGameStatus = function(v187) --[[ Line: 600 ]]
-        if not isElement(v187) then
+    getPlayerGameStatus = function(playerToCheck) 
+        if not isElement(playerToCheck) then
             return false;
-        elseif getElementData(v187, "Loading") then
+        elseif getElementData(playerToCheck, "Loading") then
             return "Loading";
         else
-            return getElementData(v187, "Status");
+            return getElementData(playerToCheck, "Status");
         end;
     end;
-    getRoundState = function() --[[ Line: 605 ]]
+    getRoundState = function() 
         return (getTacticsData("roundState"));
     end;
 end)();
-(function(...) --[[ Line: 0 ]]
+(function(...) 
     wastedTimer = {};
     waitingTimer = nil;
     startTimer = nil;
@@ -852,62 +847,62 @@ end)();
     restartTimer = nil;
     unpauseTimer = nil;
     playersVeh = {};
-    addServerTeam = function(v188, v189, v190, v191) --[[ Line: 15 ]]
-        local v192 = #getElementsByType("team");
-        if not v188 then
-            v188 = "Team" .. v192;
+    addServerTeam = function(teamName, teamSkins, teamColor, teamScore) 
+        local teamCount = #getElementsByType("team");
+        if not teamName then
+            teamName = "Team" .. teamCount;
         end;
-        if not v189 then
-            local v193 = math.random(7, 288);
-            while v193 == 8 or v193 == 42 or v193 == 65 or v193 == 74 or v193 == 86 or v193 == 119 or v193 == 149 or v193 == 208 or v193 == 239 or v193 == 265 or v193 == 266 or v193 == 267 or v193 == 268 or v193 == 269 or v193 == 270 or v193 == 271 or v193 == 272 or v193 == 273 do
-                v193 = math.random(7, 288);
+        if not teamSkins then
+            local randomSkin = math.random(7, 288);
+            while randomSkin == 8 or randomSkin == 42 or randomSkin == 65 or randomSkin == 74 or randomSkin == 86 or randomSkin == 119 or randomSkin == 149 or randomSkin == 208 or randomSkin == 239 or randomSkin == 265 or randomSkin == 266 or randomSkin == 267 or randomSkin == 268 or randomSkin == 269 or randomSkin == 270 or randomSkin == 271 or randomSkin == 272 or randomSkin == 273 do
+                randomSkin = math.random(7, 288);
             end;
-            v189 = {v193};
+            teamSkins = {randomSkin};
         end;
-        if not v190 then
-            v190 = {math.random(255), math.random(255), math.random(255)};
+        if not teamColor then
+            teamColor = {math.random(255), math.random(255), math.random(255)};
         end;
-        if not v191 then
-            v191 = 0;
+        if not teamScore then
+            teamScore = 0;
         end;
-        local v194 = createTeam(v188, v190[1], v190[2], v190[3]);
-        local v195 = getTacticsData("settings", "friendly_fire") == "true";
-        setTeamFriendlyFire(v194, v195);
-        if v192 > 0 then
-            setElementData(v194, "Skins", v189);
-            setElementData(v194, "Score", v191);
-            setElementData(v194, "Side", v192);
-            local v196 = getTacticsData("Sides");
-            if not v196 or #v196 == 0 then
-                v196 = {};
+        local createdTeam = createTeam(teamName, teamColor[1], teamColor[2], teamColor[3]);
+        local friendlyFireEnabled = getTacticsData("settings", "friendly_fire") == "true";
+        setTeamFriendlyFire(createdTeam, friendlyFireEnabled);
+        if teamCount > 0 then
+            setElementData(createdTeam, "Skins", teamSkins);
+            setElementData(createdTeam, "Score", teamScore);
+            setElementData(createdTeam, "Side", teamCount);
+            local sidesArray = getTacticsData("Sides");
+            if not sidesArray or #sidesArray == 0 then
+                sidesArray = {};
             end;
-            table.insert(v196, v194);
-            setTacticsData(v196, "Sides");
-            local v197 = {};
-            for v198, v199 in ipairs(v196) do
-                v197[v199] = v198;
+            table.insert(sidesArray, createdTeam);
+            setTacticsData(sidesArray, "Sides");
+            local teamSidesMap = {};
+            for sideIndex, sideTeam in ipairs(sidesArray) do
+                teamSidesMap[sideTeam] = sideIndex;
             end;
-            setTacticsData(v197, "Teamsides");
+            setTacticsData(teamSidesMap, "Teamsides");
         end;
-        return v194;
+        return createdTeam;
     end;
-    removeServerTeam = function(v200) --[[ Line: 44 ]]
+    removeServerTeam = function(teamToRemove) 
         if #getElementsByType("team") <= 1 then
             return false;
         else
-            local v201 = getTacticsData("Sides") or {};
-            for v202, v203 in ipairs(v201) do
-                if v203 == v200 then
-                    table.remove(v201, v202);
+            local currentSides = getTacticsData("Sides") or {};
+            for currentSideIndex, currentSideTeam in ipairs(currentSides) do
+                if currentSideTeam == teamToRemove then
+                    table.remove(currentSides, currentSideIndex);
                 end;
             end;
-            setTacticsData(v201, "Sides");
-            local v204 = {};
-            for v205, v206 in ipairs(v201) do
-                v204[v206] = v205;
+            setTacticsData(currentSides, "Sides");
+            local updatedTeamSides = {};
+            for updateIndex, updateTeam in ipairs(currentSides) do
+                updatedTeamSides[updateTeam] = updateIndex;
             end;
-            setTacticsData(v204, "Teamsides");
-            return destroyElement(v200);
+            setTacticsData(updatedTeamSides, "Teamsides");
+            return destroyElement(teamToRemove);
         end;
     end;
     convertWeaponSkillToNames = {
@@ -936,137 +931,137 @@ end)();
         m4 = 78, 
         sniper = 79
     };
-    applyStats = function(v207) --[[ Line: 63 ]]
-        for v208 in pairs(convertWeaponSkillToNames) do
-            setPedStat(v207, v208, 999);
+    applyStats = function(targetPlayer) 
+        for weaponStatID in pairs(convertWeaponSkillToNames) do
+            setPedStat(targetPlayer, weaponStatID, 999);
         end;
-        local v209 = {
+        local additionalStats = {
             [22] = 999, 
             [225] = 999, 
             [160] = 999, 
             [229] = 999, 
             [230] = 999
         };
-        for v210, v211 in pairs(v209) do
-            setPedStat(v207, v210, v211);
+        for statID, statValue in pairs(additionalStats) do
+            setPedStat(targetPlayer, statID, statValue);
         end;
     end;
-    fixPlayerID = function(v212) --[[ Line: 78 ]]
-        if getElementID(v212) ~= "" then
+    fixPlayerID = function(playerElement) 
+        if getElementID(playerElement) ~= "" then
             return false;
         else
-            local v213 = 1;
-            while getElementByID(tostring(v213)) do
-                v213 = v213 + 1;
+            local newPlayerID = 1;
+            while getElementByID(tostring(newPlayerID)) do
+                newPlayerID = newPlayerID + 1;
             end;
-            setElementID(v212, tostring(v213));
-            return v213;
+            setElementID(playerElement, tostring(newPlayerID));
+            return newPlayerID;
         end;
     end;
-    setSideNames = function(v214, v215) --[[ Line: 87 ]]
-        local v216 = getTacticsData("SideNames") or {"", ""};
-        if not v214 then
-            v214 = v216[1];
+    setSideNames = function(sideName1, sideName2) 
+        local currentSideNames = getTacticsData("SideNames") or {"", ""};
+        if not sideName1 then
+            sideName1 = currentSideNames[1];
         end;
-        if not v215 then
-            v215 = v216[2];
+        if not sideName2 then
+            sideName2 = currentSideNames[2];
         end;
-        setTacticsData({v214, v215}, "SideNames");
+        setTacticsData({sideName1, sideName2}, "SideNames");
     end;
-    onResourceStop = function(_) --[[ Line: 93 ]]
-        for _, v219 in ipairs(getElementsByType("player")) do
-            setElementData(v219, "Status", nil);
+    onResourceStop = function(_) 
+        for _, playerToClean in ipairs(getElementsByType("player")) do
+            setElementData(playerToClean, "Status", nil);
         end;
     end;
-    onResourceStart = function(v220) --[[ Line: 100 ]]
-        if getThisResource() == v220 then
+    onResourceStart = function(startedResource) 
+        if getThisResource() == startedResource then
             setGameType("Tactics " .. getTacticsData("version"));
             setTacticsData({
                 "Attack", 
                 "Defend"
             }, "SideNames");
             if not fileExists("config/configs.xml") then
-                local v221 = xmlCreateFile("config/configs.xml", "configs");
-                local v222 = xmlCreateChild(v221, "current");
-                xmlNodeSetAttribute(v222, "src", "_default");
-                xmlSaveFile(v221);
-                xmlUnloadFile(v221);
+                local configsFile = xmlCreateFile("config/configs.xml", "configs");
+                local currentConfigNode = xmlCreateChild(configsFile, "current");
+                xmlNodeSetAttribute(currentConfigNode, "src", "_default");
+                xmlSaveFile(configsFile);
+                xmlUnloadFile(configsFile);
                 if fileExists("config/_default.xml") then
                     fileDelete("config/_default.xml");
                 end;
                 defaultConfig(true);
             else
-                local v223 = getCurrentConfig();
+                local currentConfigName = getCurrentConfig();
                 defaultConfig(true);
-                startConfig(v223, true);
+                startConfig(currentConfigName, true);
             end;
-            local v224 = {};
-            for v225 in pairs(getAllElementData(getElementByID("Tactics"))) do
-                table.insert(v224, v225);
+            local allDataKeys = {};
+            for dataKeyName in pairs(getAllElementData(getElementByID("Tactics"))) do
+                table.insert(allDataKeys, dataKeyName);
             end;
-            setTacticsData(v224, "AllData");
-            for _, v227 in ipairs(getElementsByType("player")) do
-                fixPlayerID(v227);
-                applyStats(v227);
+            setTacticsData(allDataKeys, "AllData");
+            for _, playerInList in ipairs(getElementsByType("player")) do
+                fixPlayerID(playerInList);
+                applyStats(playerInList);
             end;
             setTimer(nextMap, 50, 1);
-        elseif getResourceInfo(v220, "type") == "map" and getResourceName(v220) == getTacticsData("MapResName") then
-            local v228 = {
+        elseif getResourceInfo(startedResource, "type") == "map" and getResourceName(startedResource) == getTacticsData("MapResName") then
+            local mapInfo = {
                 modename = getTacticsData("Map"), 
                 name = getTacticsData("MapName", false) or "unnamed", 
                 author = getTacticsData("MapAuthor", false), 
-                resname = getResourceName(v220), 
-                resource = v220
+                resname = getResourceName(startedResource), 
+                resource = startedResource
             };
-            triggerEvent("onMapStarting", root, v228, {}, {
+            triggerEvent("onMapStarting", root, mapInfo, {}, {
                 statsKey = "name"
             });
-            local v229 = getTacticsData("MapName", false);
-            outputServerLog("* Change map to " .. v229);
+            local mapNameText = getTacticsData("MapName", false);
+            outputServerLog("* Change map to " .. mapNameText);
         end;
     end;
-    onMapStarting = function(_) --[[ Line: 139 ]]
+    onMapStarting = function(_) 
         waitingTimer = "wait";
-        local v231 = TimeToSec(getTacticsData("settings", "time") or "12:00");
-        setTime(math.floor(v231 / 60), v231 - 60 * math.floor(v231 / 60));
-        for _, v233 in ipairs(getElementsByType("player")) do
-            removeElementData(v233, "RespawnLives");
+        local timeSeconds = TimeToSec(getTacticsData("settings", "time") or "12:00");
+        setTime(math.floor(timeSeconds / 60), timeSeconds - 60 * math.floor(timeSeconds / 60));
+        for _, playerInLoop in ipairs(getElementsByType("player")) do
+            removeElementData(playerInLoop, "RespawnLives");
         end;
     end;
-    onResourcePreStart = function(v234) --[[ Line: 147 ]]
-        if getResourceInfo(v234, "type") == "map" then
-            local v235 = getTacticsData("modes_defined") or {};
-            local v236 = false;
-            for v237 in pairs(v235) do
-                if string.find(getResourceName(v234), v237) == 1 then
-                    v236 = v237;
+    onResourcePreStart = function(preStartResource) 
+        if getResourceInfo(preStartResource, "type") == "map" then
+            local definedModes = getTacticsData("modes_defined") or {};
+            local modeType = false;
+            for modePattern in pairs(definedModes) do
+                if string.find(getResourceName(preStartResource), modePattern) == 1 then
+                    modeType = modePattern;
                 end;
             end;
-            if v236 then
-                local v238 = {
+            if modeType then
+                local currentMapInfo = {
                     modename = getTacticsData("Map"), 
                     name = getTacticsData("MapName", false) or "unnamed", 
                     author = getTacticsData("MapAuthor", false), 
                     resname = getTacticsData("MapResName")
                 };
-                triggerClientEvent(root, "onClientMapStopping", root, v238);
-                triggerEvent("onMapStopping", root, v238);
-                local v239 = getResourceInfo(v234, "name");
-                if not v239 then
-                    v239 = string.sub(string.gsub(getResourceName(v234), "_", " "), #v236 + 2);
-                    if #v239 > 1 then
-                        v239 = string.upper(string.sub(v239, 1, 1)) .. string.sub(v239, 2);
+                triggerClientEvent(root, "onClientMapStopping", root, currentMapInfo);
+                triggerEvent("onMapStopping", root, currentMapInfo);
+                local formattedName = getResourceInfo(preStartResource, "name");
+                if not formattedName then
+                    formattedName = string.sub(string.gsub(getResourceName(preStartResource), "_", " "), #modeType + 2);
+                    if #formattedName > 1 then
+                        formattedName = string.upper(string.sub(formattedName, 1, 1)) .. string.sub(formattedName, 2);
                     end;
                 end;
-                v239 = string.upper(string.sub(v236, 1, 1)) .. string.sub(v236, 2) .. ": " .. v239;
-                setMapName(v239);
-                setTacticsData(v236, "Map");
-                setTacticsData(v239, "MapName");
-                setTacticsData(getResourceInfo(v234, "author"), "MapAuthor");
-                setTacticsData(getResourceName(v234), "MapResName");
-                local v240 = get(getResourceName(v234) .. ".Interior");
-                if v240 then
-                    setTacticsData(tonumber(v240), "Interior");
+                formattedName = string.upper(string.sub(modeType, 1, 1)) .. string.sub(modeType, 2) .. ": " .. formattedName;
+                setMapName(formattedName);
+                setTacticsData(modeType, "Map");
+                setTacticsData(formattedName, "MapName");
+                setTacticsData(getResourceInfo(preStartResource, "author"), "MapAuthor");
+                setTacticsData(getResourceName(preStartResource), "MapResName");
+                local mapInterior = get(getResourceName(preStartResource) .. ".Interior");
+                if mapInterior then
+                    setTacticsData(tonumber(mapInterior), "Interior");
                 else
                     setTacticsData(0, "Interior");
                 end;
@@ -1079,10 +1074,10 @@ end)();
             end;
         end;
     end;
-    forcedStartRound = function(v241) --[[ Line: 192 ]]
+    forcedStartRound = function(startType) 
         if getRoundState() == "started" then
             return;
-        elseif not v241 and isTimer(startTimer) then
+        elseif not startType and isTimer(startTimer) then
             return;
         else
             if isTimer(startTimer) then
@@ -1094,111 +1089,111 @@ end)();
                 waitingTimer = nil;
             end;
             setTacticsData(nil, "message");
-            if v241 == "faststart" then
+            if startType == "faststart" then
                 callClientFunction(root, "showCountdown", 0);
                 callClientFunction(root, "fixTickCount", getTickCount());
-                for _, v243 in ipairs(getElementsByType("player")) do
-                    if getElementData(v243, "Status") == "Play" then
-                        local v244 = getPedOccupiedVehicle(v243);
-                        if isElement(v244) then
-                            setElementFrozen(v244, false);
+                for _, playingPlayer in ipairs(getElementsByType("player")) do
+                    if getElementData(playingPlayer, "Status") == "Play" then
+                        local playerVehicle = getPedOccupiedVehicle(playingPlayer);
+                        if isElement(playerVehicle) then
+                            setElementFrozen(playerVehicle, false);
                         end;
-                        setElementFrozen(v243, false);
-                        toggleAllControls(v243, true);
+                        setElementFrozen(playingPlayer, false);
+                        toggleAllControls(playingPlayer, true);
                     end;
                 end;
-                local v245 = getTacticsData("Map");
-                local v246 = TimeToSec(getTacticsData("modes", v245, "timelimit") or "0:00");
-                if v246 <= 0 then
+                local mapMode = getTacticsData("Map");
+                local timeLimitSeconds = TimeToSec(getTacticsData("modes", mapMode, "timelimit") or "0:00");
+                if timeLimitSeconds <= 0 then
                     setTacticsData(nil, "timeleft");
                     if isTimer(overtimeTimer) then
                         killTimer(overtimeTimer);
                     end;
                 else
-                    setTacticsData(getTickCount() + v246 * 1000, "timeleft");
+                    setTacticsData(getTickCount() + timeLimitSeconds * 1000, "timeleft");
                     if isTimer(overtimeTimer) then
                         killTimer(overtimeTimer);
                     end;
-                    overtimeTimer = setTimer(triggerEvent, v246 * 1000, 1, "onRoundTimesup", root);
+                    overtimeTimer = setTimer(triggerEvent, timeLimitSeconds * 1000, 1, "onRoundTimesup", root);
                 end;
                 triggerEvent("onRoundStart", root);
                 triggerClientEvent(root, "onClientRoundStart", root);
-            elseif v241 == "notround" then
+            elseif startType == "notround" then
                 setTacticsData(nil, "timeleft");
                 if isTimer(overtimeTimer) then
                     killTimer(overtimeTimer);
                 end;
-                for _, v248 in ipairs(getElementsByType("player")) do
-                    if getElementData(v248, "Status") == "Play" then
-                        local v249 = getPedOccupiedVehicle(v248);
-                        if isElement(v249) then
-                            setElementFrozen(v249, false);
+                for _, playPlayer in ipairs(getElementsByType("player")) do
+                    if getElementData(playPlayer, "Status") == "Play" then
+                        local occupiedVehicle = getPedOccupiedVehicle(playPlayer);
+                        if isElement(occupiedVehicle) then
+                            setElementFrozen(occupiedVehicle, false);
                         end;
-                        setElementFrozen(v248, false);
-                        toggleAllControls(v248, true);
+                        setElementFrozen(playPlayer, false);
+                        toggleAllControls(playPlayer, true);
                     end;
                 end;
                 triggerEvent("onRoundStart", root);
                 triggerClientEvent(root, "onClientRoundStart", root);
             else
-                local v250 = tonumber(getTacticsData("settings", "countdown_start")) or 3;
-                startTimer = setTimer(onStartCount, 2000, 1, v250);
-                triggerEvent("onRoundCountdownStarted", root, 2000 + v250 * 1000);
-                for _, v252 in ipairs(getElementsByType("player")) do
-                    if getElementData(v252, "Status") then
-                        triggerClientEvent(v252, "onClientRoundCountdownStarted", root, 2000 + v250 * 1000);
+                local countdownTime = tonumber(getTacticsData("settings", "countdown_start")) or 3;
+                startTimer = setTimer(onStartCount, 2000, 1, countdownTime);
+                triggerEvent("onRoundCountdownStarted", root, 2000 + countdownTime * 1000);
+                for _, connectedPlayer in ipairs(getElementsByType("player")) do
+                    if getElementData(connectedPlayer, "Status") then
+                        triggerClientEvent(connectedPlayer, "onClientRoundCountdownStarted", root, 2000 + countdownTime * 1000);
                     end;
                 end;
             end;
             return;
         end;
     end;
-    onStartCount = function(v253) --[[ Line: 245 ]]
-        if v253 > 0 then
-            callClientFunction(root, "showCountdown", v253);
-            startTimer = setTimer(onStartCount, 1000, 1, v253 - 1);
+    onStartCount = function(countValue) 
+        if countValue > 0 then
+            callClientFunction(root, "showCountdown", countValue);
+            startTimer = setTimer(onStartCount, 1000, 1, countValue - 1);
         else
             forcedStartRound("faststart");
         end;
     end;
-    endRound = function(v254, v255, v256) --[[ Line: 253 ]]
-        local l_pairs_0 = pairs;
-        local v258 = v256 or {};
-        for v259, v260 in l_pairs_0(v258) do
-            local v261 = getElementData(v259, "Score") or 0;
-            setElementData(v259, "Score", v261 + v260);
+    endRound = function(winningSide, endMessage, scoreChanges) 
+        local pairsFunc = pairs;
+        local scoreMap = scoreChanges or {};
+        for teamElement, scoreChange in pairsFunc(scoreMap) do
+            local currentScore = getElementData(teamElement, "Score") or 0;
+            setElementData(teamElement, "Score", currentScore + scoreChange);
         end;
-        triggerEvent("onRoundFinish", root, v254, v255, v256);
-        triggerClientEvent(root, "onClientRoundFinish", root, v254, v255, v256);
-        l_pairs_0 = getTacticsData("MapName", false);
-        setTacticsData({v254, v255}, "message");
-        if v254 then
-            v258 = "";
-            if type(v254) == "table" then
-                if type(v254[1]) == "string" then
-                    local l_v254_0 = v254;
-                    local v263 = table.remove(l_v254_0, 1);
-                    v258 = string.format(getString(tostring(v263)), unpack(l_v254_0));
+        triggerEvent("onRoundFinish", root, winningSide, endMessage, scoreChanges);
+        triggerClientEvent(root, "onClientRoundFinish", root, winningSide, endMessage, scoreChanges);
+        pairsFunc = getTacticsData("MapName", false);
+        setTacticsData({winningSide, endMessage}, "message");
+        if winningSide then
+            scoreMap = "";
+            if type(winningSide) == "table" then
+                if type(winningSide[1]) == "string" then
+                    local winArgs = winningSide;
+                    local messageKey = table.remove(winArgs, 1);
+                    scoreMap = string.format(getString(tostring(messageKey)), unpack(winArgs));
                 else
-                    local v264 = v254[4];
-                    local l_v254_1 = v254;
-                    table.remove(l_v254_1, 1);
-                    table.remove(l_v254_1, 1);
-                    table.remove(l_v254_1, 1);
-                    table.remove(l_v254_1, 1);
-                    v258 = string.format(getString(tostring(v264)), unpack(l_v254_1));
+                    local messageID = winningSide[4];
+                    local formatArgs2 = winningSide;
+                    table.remove(formatArgs2, 1);
+                    table.remove(formatArgs2, 1);
+                    table.remove(formatArgs2, 1);
+                    table.remove(formatArgs2, 1);
+                    scoreMap = string.format(getString(tostring(messageID)), unpack(formatArgs2));
                 end;
-            elseif type(v254) == "string" then
-                v258 = getString(v254);
-                if #v258 == 0 then
-                    v258 = tostring(v254);
+            elseif type(winningSide) == "string" then
+                scoreMap = getString(winningSide);
+                if #scoreMap == 0 then
+                    scoreMap = tostring(winningSide);
                 end;
             else
-                v258 = tostring(v254);
+                scoreMap = tostring(winningSide);
             end;
-            outputServerLog("* Map " .. removeColorCoding(l_pairs_0) .. " ended [" .. removeColorCoding(v258) .. "]");
+            outputServerLog("* Map " .. removeColorCoding(pairsFunc) .. " ended [" .. removeColorCoding(scoreMap) .. "]");
         else
-            outputServerLog("* Map " .. removeColorCoding(l_pairs_0) .. " ended");
+            outputServerLog("* Map " .. removeColorCoding(pairsFunc) .. " ended");
         end;
         setTacticsData(nil, "timeleft");
         if isTimer(waitingTimer) then
@@ -1218,7 +1213,7 @@ end)();
         end;
         winTimer = setTimer(nextMap, 8000, 1);
     end;
-    clearMap = function() --[[ Line: 292 ]]
+    clearMap = function() 
         setTacticsData(nil, "ResourceNext");
         setTacticsData(nil, "timeleft");
         setTacticsData(nil, "timestart");
@@ -1244,18 +1239,18 @@ end)();
         if isTimer(restartTimer) then
             killTimer(restartTimer);
         end;
-        for v266, v267 in pairs(wastedTimer) do
-            if isTimer(v267) then
-                killTimer(v267);
-                wastedTimer[v266] = nil;
+        for wastedPlayer, wastedTimerRef in pairs(wastedTimer) do
+            if isTimer(wastedTimerRef) then
+                killTimer(wastedTimerRef);
+                wastedTimer[wastedPlayer] = nil;
             end;
         end;
-        for _, v269 in ipairs(getElementsByType("player")) do
-            setElementData(v269, "Loading", true);
+        for _, loadingPlayer in ipairs(getElementsByType("player")) do
+            setElementData(loadingPlayer, "Loading", true);
         end;
         restartTimer = setTimer(nextMap, 3000, 1);
     end;
-    startMap = function(v270, v271) --[[ Line: 313 ]]
+    startMap = function(mapResource, startMode) 
         if not hasObjectPermissionTo(getThisResource(), "function.startResource", false) then
             outputLangString(root, "resource_have_not_permissions", getResourceName(getThisResource()), "function.startResource");
             return;
@@ -1266,72 +1261,72 @@ end)();
             outputLangString(root, "resource_have_not_permissions", getResourceName(getThisResource()), "function.restartResource");
             return;
         else
-            local v272 = getTacticsData("modes_defined");
-            local v273 = getTacticsData("map_disabled") or {};
-            if v270 then
-                if type(v270) == "string" and v272[v270] then
-                    local v274 = {};
-                    for _, v276 in ipairs(getResources()) do
-                        if getResourceInfo(v276, "type") == "map" and string.find(getResourceName(v276), v270) == 1 then
-                            table.insert(v274, v276);
+            local modesList = getTacticsData("modes_defined");
+            local disabledMaps = getTacticsData("map_disabled") or {};
+            if mapResource then
+                if type(mapResource) == "string" and modesList[mapResource] then
+                    local availableMaps = {};
+                    for _, resourceCheck in ipairs(getResources()) do
+                        if getResourceInfo(resourceCheck, "type") == "map" and string.find(getResourceName(resourceCheck), mapResource) == 1 then
+                            table.insert(availableMaps, resourceCheck);
                         end;
                     end;
-                    if #v274 > 0 then
-                        local v277 = v274[math.random(#v274)];
-                        startMap(v277, "random");
+                    if #availableMaps > 0 then
+                        local selectedResource = availableMaps[math.random(#availableMaps)];
+                        startMap(selectedResource, "random");
                         return true;
                     else
                         return false;
                     end;
                 else
-                    if type(v270) == "string" then
-                        v270 = getResourceFromName(v270);
+                    if type(mapResource) == "string" then
+                        mapResource = getResourceFromName(mapResource);
                     end;
-                    if v270 and getResourceInfo(v270, "type") == "map" then
-                        if type(v271) == "string" and v271 == "vote" then
-                            local v278 = getResourceName(v270);
-                            local v279 = string.lower(string.sub(v278, 1, string.find(v278, "_") - 1));
-                            if getTacticsData("modes", v279, "enable") == "false" or v273[v278] then
+                    if mapResource and getResourceInfo(mapResource, "type") == "map" then
+                        if type(startMode) == "string" and startMode == "vote" then
+                            local resourceName = getResourceName(mapResource);
+                            local modeName = string.lower(string.sub(resourceName, 1, string.find(resourceName, "_") - 1));
+                            if getTacticsData("modes", modeName, "enable") == "false" or disabledMaps[resourceName] then
                                 return false;
                             end;
                         end;
-                        if type(v271) == "number" then
-                            setTacticsData(v271, "ResourceCurrent");
+                        if type(startMode) == "number" then
+                            setTacticsData(startMode, "ResourceCurrent");
                         end;
-                        for _, v281 in ipairs(getResources()) do
-                            if getResourceState(v281) == "running" and getResourceInfo(v281, "type") == "map" then
-                                for _, v283 in ipairs(getElementChildren(getResourceRootElement(v281))) do
-                                    destroyElement(v283);
+                        for _, runningResource in ipairs(getResources()) do
+                            if getResourceState(runningResource) == "running" and getResourceInfo(runningResource, "type") == "map" then
+                                for _, mapElement in ipairs(getElementChildren(getResourceRootElement(runningResource))) do
+                                    destroyElement(mapElement);
                                 end;
-                                if v270 ~= v281 then
-                                    stopResource(v281);
+                                if mapResource ~= runningResource then
+                                    stopResource(runningResource);
                                 end;
                             end;
                         end;
                         clearMap();
-                        if not startResource(v270) then
-                            restartResource(v270);
+                        if not startResource(mapResource) then
+                            restartResource(mapResource);
                         end;
-                        local v284 = getResourceInfo(v270, "name");
-                        local v285 = getResourceName(v270);
-                        local v286 = "";
-                        for v287 in pairs(v272) do
-                            if string.find(v285, v287) == 1 then
-                                v286 = v287;
+                        local resourceTitle = getResourceInfo(mapResource, "name");
+                        local mapResName = getResourceName(mapResource);
+                        local modeKey = "";
+                        for modeMatch in pairs(modesList) do
+                            if string.find(mapResName, modeMatch) == 1 then
+                                modeKey = modeMatch;
                                 break;
                             end;
                         end;
-                        if not v284 then
-                            v284 = string.sub(string.gsub(v285, "_", " "), #v286 + 2);
-                            if #v284 > 1 then
-                                v284 = string.upper(string.sub(v284, 1, 1)) .. string.sub(v284, 2);
+                        if not resourceTitle then
+                            resourceTitle = string.sub(string.gsub(mapResName, "_", " "), #modeKey + 2);
+                            if #resourceTitle > 1 then
+                                resourceTitle = string.upper(string.sub(resourceTitle, 1, 1)) .. string.sub(resourceTitle, 2);
                             end;
                         end;
-                        v284 = string.upper(string.sub(v286, 1, 1)) .. string.sub(v286, 2) .. ": " .. v284;
-                        if type(v271) == "string" and v271 == "random" then
-                            outputLangString(root, "map_change_random", v284);
+                        resourceTitle = string.upper(string.sub(modeKey, 1, 1)) .. string.sub(modeKey, 2) .. ": " .. resourceTitle;
+                        if type(startMode) == "string" and startMode == "random" then
+                            outputLangString(root, "map_change_random", resourceTitle);
                         else
-                            outputLangString(root, "map_change", v284);
+                            outputLangString(root, "map_change", resourceTitle);
                         end;
                         return true;
                     end;
@@ -1340,7 +1335,7 @@ end)();
             return false;
         end;
     end;
-    nextMap = function() --[[ Line: 389 ]]
+    nextMap = function() 
         if not hasObjectPermissionTo(getThisResource(), "function.startResource", false) then
             outputLangString(root, "resource_have_not_permissions", getResourceName(getThisResource()), "function.startResource");
             return;
@@ -1351,141 +1346,141 @@ end)();
             outputLangString(root, "resource_have_not_permissions", getResourceName(getThisResource()), "function.restartResource");
             return;
         else
-            local v288 = getTacticsData("ResourceNext");
-            local v289 = getTacticsData("map_disabled") or {};
-            if v288 then
-                local v290 = getResourceFromName(v288);
-                return startMap(v290);
+            local nextMapName = getTacticsData("ResourceNext");
+            local disabledMapsList = getTacticsData("map_disabled") or {};
+            if nextMapName then
+                local nextResource = getResourceFromName(nextMapName);
+                return startMap(nextResource);
             else
                 if getTacticsData("automatics") == "cycler" then
-                    local v291 = getTacticsData("Resources");
-                    if v291 and #v291 > 0 then
-                        local v292 = getTacticsData("ResourceCurrent");
-                        if not v292 or #v291 <= v292 then
-                            v292 = 1;
+                    local mapCycleList = getTacticsData("Resources");
+                    if mapCycleList and #mapCycleList > 0 then
+                        local currentIndex = getTacticsData("ResourceCurrent");
+                        if not currentIndex or #mapCycleList <= currentIndex then
+                            currentIndex = 1;
                         else
-                            v292 = v292 + 1;
+                            currentIndex = currentIndex + 1;
                         end;
-                        local v293 = v291[v292][1];
-                        if v289[v293] then
+                        local nextMapToLoad = mapCycleList[currentIndex][1];
+                        if disabledMapsList[nextMapToLoad] then
                             return false;
                         else
-                            setTacticsData(v292, "ResourceCurrent");
-                            return startMap(v293);
+                            setTacticsData(currentIndex, "ResourceCurrent");
+                            return startMap(nextMapToLoad);
                         end;
                     end;
                 end;
                 if getTacticsData("automatics") == "lobby" then
-                    local v294 = {};
-                    for _, v296 in ipairs(getResources()) do
-                        if getResourceInfo(v296, "type") == "map" and string.find(getResourceName(v296), "lobby") == 1 and not v289[getResourceName(v296)] then
-                            table.insert(v294, v296);
+                    local lobbyMaps = {};
+                    for _, lobbyResource in ipairs(getResources()) do
+                        if getResourceInfo(lobbyResource, "type") == "map" and string.find(getResourceName(lobbyResource), "lobby") == 1 and not disabledMapsList[getResourceName(lobbyResource)] then
+                            table.insert(lobbyMaps, lobbyResource);
                         end;
                     end;
-                    if #v294 > 0 then
-                        local v297 = v294[math.random(#v294)];
-                        return startMap(v297);
+                    if #lobbyMaps > 0 then
+                        local randomLobbyMap = lobbyMaps[math.random(#lobbyMaps)];
+                        return startMap(randomLobbyMap);
                     end;
                 end;
                 if getTacticsData("automatics") == "voting" then
-                    local v298 = getTacticsData("modes_defined");
-                    local v299 = {};
-                    for _, v301 in ipairs(getResources()) do
-                        if getResourceInfo(v301, "type") == "map" then
-                            for v302 in pairs(v298) do
-                                if v302 ~= "lobby" and string.find(getResourceName(v301), v302) == 1 and getTacticsData("modes", v302, "enable") ~= "false" and not v289[getResourceName(v301)] then
-                                    table.insert(v299, getResourceName(v301));
+                    local modesDefined = getTacticsData("modes_defined");
+                    local votingMaps = {};
+                    for _, mapResourceCheck in ipairs(getResources()) do
+                        if getResourceInfo(mapResourceCheck, "type") == "map" then
+                            for modeKeyCheck in pairs(modesDefined) do
+                                if modeKeyCheck ~= "lobby" and string.find(getResourceName(mapResourceCheck), modeKeyCheck) == 1 and getTacticsData("modes", modeKeyCheck, "enable") ~= "false" and not disabledMapsList[getResourceName(mapResourceCheck)] then
+                                    table.insert(votingMaps, getResourceName(mapResourceCheck));
                                 end;
                             end;
                         end;
                     end;
-                    if #v299 > 0 then
-                        local v303 = {};
-                        for _ = 1, math.min(8, #v299) do
-                            local v305 = math.random(#v299);
-                            local v306 = v299[v305];
-                            table.remove(v299, v305);
-                            table.insert(v303, {
-                                v306
+                    if #votingMaps > 0 then
+                        local voteOptions = {};
+                        for _ = 1, math.min(8, #votingMaps) do
+                            local randomIndex = math.random(#votingMaps);
+                            local randomMap = votingMaps[randomIndex];
+                            table.remove(votingMaps, randomIndex);
+                            table.insert(voteOptions, {
+                                randomMap
                             });
                         end;
-                        table.insert(v303, {
+                        table.insert(voteOptions, {
                             getTacticsData("MapResName"), 
                             "Play again"
                         });
-                        triggerEvent("onPlayerVote", root, v303);
+                        triggerEvent("onPlayerVote", root, voteOptions);
                         winTimer = "voting";
                         setGameSpeed(tonumber(getTacticsData("settings", "gamespeed") or 1));
                         return true;
                     end;
                 end;
-                local v307 = getTacticsData("modes_defined");
-                local v308 = {};
-                for _, v310 in ipairs(getResources()) do
-                    if getResourceInfo(v310, "type") == "map" then
-                        for v311 in pairs(v307) do
-                            if string.find(getResourceName(v310), v311) == 1 and getTacticsData("modes", v311, "enable") ~= "false" and not v289[getResourceName(v310)] then
-                                table.insert(v308, v310);
+                local availableModes = getTacticsData("modes_defined");
+                local allMaps = {};
+                for _, allMapResource in ipairs(getResources()) do
+                    if getResourceInfo(allMapResource, "type") == "map" then
+                        for modeKeyAll in pairs(availableModes) do
+                            if string.find(getResourceName(allMapResource), modeKeyAll) == 1 and getTacticsData("modes", modeKeyAll, "enable") ~= "false" and not disabledMapsList[getResourceName(allMapResource)] then
+                                table.insert(allMaps, allMapResource);
                             end;
                         end;
                     end;
                 end;
-                if #v308 > 0 then
-                    local v312 = v308[math.random(#v308)];
-                    return startMap(v312);
+                if #allMaps > 0 then
+                    local randomMapResource = allMaps[math.random(#allMaps)];
+                    return startMap(randomMapResource);
                 else
                     return false;
                 end;
             end;
         end;
     end;
-    swapTeams = function() --[[ Line: 475 ]]
-        local v313 = getTacticsData("Sides") or {};
-        local v314 = getElementsByType("team");
-        table.remove(v314, 1);
-        if #v313 ~= #v314 then
-            v313 = {
-                unpack(v314)
+    swapTeams = function() 
+        local sidesList = getTacticsData("Sides") or {};
+        local allTeams = getElementsByType("team");
+        table.remove(allTeams, 1);
+        if #sidesList ~= #allTeams then
+            sidesList = {
+                unpack(allTeams)
             };
         end;
-        table.insert(v313, v313[1]);
-        table.remove(v313, 1);
-        setTacticsData(v313, "Sides");
-        local v315 = {};
-        for v316, v317 in ipairs(v313) do
-            v315[v317] = v316;
+        table.insert(sidesList, sidesList[1]);
+        table.remove(sidesList, 1);
+        setTacticsData(sidesList, "Sides");
+        local updatedSides = {};
+        for newIndex, teamInList in ipairs(sidesList) do
+            updatedSides[teamInList] = newIndex;
         end;
-        setTacticsData(v315, "Teamsides");
+        setTacticsData(updatedSides, "Teamsides");
     end;
-    onPlayerConnect = function(v318, v319, _, _, _, _) --[[ Line: 490 ]]
-        outputLangString(root, "connect", v318, v319);
+    onPlayerConnect = function(playerName, playerIP, _, _, _, _) 
+        outputLangString(root, "connect", playerName, playerIP);
     end;
-    onPlayerJoin = function() --[[ Line: 493 ]]
+    onPlayerJoin = function() 
         setElementData(source, "Status", nil);
         fixPlayerID(source);
         applyStats(source);
         bindKey(source, "R", "down", userRestore);
     end;
-    userRestore = function(v324) --[[ Line: 499 ]]
-        if getElementData(v324, "Status") ~= "Spectate" then
+    userRestore = function(playerElement2) 
+        if getElementData(playerElement2, "Status") ~= "Spectate" then
             return;
         else
-            local v325 = getTacticsData("Restores") or {};
-            for v326, v327 in ipairs(v325) do
-                if v327[1] == getPlayerName(v324) then
-                    restorePlayerLoad(v324, v326);
+            local restoreList = getTacticsData("Restores") or {};
+            for restoreIndex, restoreData in ipairs(restoreList) do
+                if restoreData[1] == getPlayerName(playerElement2) then
+                    restorePlayerLoad(playerElement2, restoreIndex);
                     return;
                 end;
             end;
-            local v328 = getTacticsData("Map");
-            if (getTacticsData("modes", v328, "respawn") or getTacticsData("settings", "respawn") or "false") == "true" then
-                outputLangString(root, "add_to_round", getPlayerName(v324));
-                triggerEvent("onPlayerRoundRespawn", v324);
+            local currentMapMode = getTacticsData("Map");
+            if (getTacticsData("modes", currentMapMode, "respawn") or getTacticsData("settings", "respawn") or "false") == "true" then
+                outputLangString(root, "add_to_round", getPlayerName(playerElement2));
+                triggerEvent("onPlayerRoundRespawn", playerElement2);
             end;
             return;
         end;
     end;
-    onPlayerDownloadComplete = function() --[[ Line: 515 ]]
+    onPlayerDownloadComplete = function() 
         callClientFunction(client, "fixTickCount", getTickCount());
         callClientFunction(client, "setTime", getTime());
         setElementData(client, "Status", "Joining");
@@ -1495,14 +1490,14 @@ end)();
             fadeCamera(client, true, 2);
         end;
     end;
-    onPlayerMapLoad = function() --[[ Line: 525 ]]
-        local v329 = getPlayerTeam(client);
-        if not v329 or getElementData(client, "ChangeTeam") then
+    onPlayerMapLoad = function() 
+        local playerTeam = getPlayerTeam(client);
+        if not playerTeam or getElementData(client, "ChangeTeam") then
             setPlayerTeam(client, nil);
             setElementData(client, "ChangeTeam", nil);
             setElementData(client, "Status", "Joining");
-        elseif v329 == getElementsByType("team")[1] or getElementData(client, "spectateskin") then
-            spawnPlayer(client, 0, 0, 0, 0, getElementModel(client), 0, 0, v329);
+        elseif playerTeam == getElementsByType("team")[1] or getElementData(client, "spectateskin") then
+            spawnPlayer(client, 0, 0, 0, 0, getElementModel(client), 0, 0, playerTeam);
             setElementData(client, "Status", "Spectate");
             callClientFunction(client, "setCameraSpectating", nil, "playertarget");
         else
@@ -1510,10 +1505,10 @@ end)();
         end;
         triggerClientEvent(root, "onClientPlayerBlipUpdate", client);
     end;
-    onPlayerMapReady = function() --[[ Line: 542 ]]
+    onPlayerMapReady = function() 
         if getRoundState() == "stopped" and client then
-            local v330 = getPlayerTeam(client);
-            if v330 and v330 ~= getElementsByType("team")[1] and not getElementData(client, "spectateskin") then
+            local playerCurrentTeam = getPlayerTeam(client);
+            if playerCurrentTeam and playerCurrentTeam ~= getElementsByType("team")[1] and not getElementData(client, "spectateskin") then
                 setElementData(client, "Status", "Play");
             end;
         end;
@@ -1525,28 +1520,27 @@ end)();
             end;
         end;
     end;
-    onPlayerTeamSelect = function(v331, v332, adm) --[[ Line: 557 ]]
-        --if client ~= source and not adm then return end
-        if not v331 then
-            local v333 = getElementsByType("team");
-            table.remove(v333, 1);
-            table.sort(v333, function(v334, v335) --[[ Line: 561 ]]
-                return countPlayersInTeam(v334) < countPlayersInTeam(v335);
+    onPlayerTeamSelect = function(selectedTeam, selectedSkin, adm) 
+        if not selectedTeam then
+            local sortedTeams = getElementsByType("team");
+            table.remove(sortedTeams, 1);
+            table.sort(sortedTeams, function(teamA, teamB) 
+                return countPlayersInTeam(teamA) < countPlayersInTeam(teamB);
             end);
-            v331 = v333[1];
+            selectedTeam = sortedTeams[1];
         end;
-        setPlayerTeam(source, v331);
-        if not v332 or type(v332) ~= "number" then
-            local skins = getElementData(v331, "Skins")
+        setPlayerTeam(source, selectedTeam);
+        if not selectedSkin or type(selectedSkin) ~= "number" then
+            local skins = getElementData(selectedTeam, "Skins")
             if type(skins) == "table" and type(skins[1]) == "number" then
-                v332 = skins[1]
+                selectedSkin = skins[1]
             else
-                v332 = 71
+                selectedSkin = 71
             end
         end;
-        setElementModel(source, v332);
-        if v331 == getElementsByType("team")[1] or getElementData(source, "spectateskin") then
-            spawnPlayer(source, 0, 0, 0, 0, v332, 0, 0, v331);
+        setElementModel(source, selectedSkin);
+        if selectedTeam == getElementsByType("team")[1] or getElementData(source, "spectateskin") then
+            spawnPlayer(source, 0, 0, 0, 0, selectedSkin, 0, 0, selectedTeam);
             setElementData(source, "Status", "Spectate");
             callClientFunction(source, "setCameraSpectating", nil, "playertarget");
         else
@@ -1558,410 +1552,405 @@ end)();
         end;
         triggerClientEvent(root, "onClientPlayerBlipUpdate", source);
     end;
-    onPlayerRoundSpawn = function() --[[ Line: 583 ]]
+    onPlayerRoundSpawn = function() 
         triggerClientEvent(root, "onClientPlayerRoundSpawn", source);
     end;
-onPlayerRoundRespawn = function() --[[ Line: 586 ]]
+onPlayerRoundRespawn = function() 
     if isTimer(wastedTimer[client]) then
         killTimer(wastedTimer[client])
     end
     
-    -- Validación del elemento client antes de usar triggerClientEvent
     local sourceElement = client
     
     if not sourceElement or (not isElement(sourceElement) and sourceElement ~= root and sourceElement ~= getRootElement()) then
-        -- Si client no es válido, salir de la función o manejar el error
         return false
     end
     
-    -- Usar pcall para manejar errores en la llamada a triggerClientEvent
     local success, result = pcall(function()
         return triggerClientEvent(root, "onClientPlayerRoundRespawn", sourceElement)
     end)
     
     if not success then
-        -- Manejar el error según sea necesario
         return false
     end
     
     return result
 end
-    onPlayerSpawn = function() --[[ Line: 590 ]]
+    onPlayerSpawn = function() 
         giveWeapon(source, 44);
         takeWeapon(source, 44);
         applyStats(source);
-        local v336 = tonumber(getTacticsData("settings", "player_start_health"));
-        local v337 = tonumber(getTacticsData("settings", "player_start_armour"));
-        setElementHealth(source, v336);
-        setPedArmor(source, v337);
+        local startHealth = tonumber(getTacticsData("settings", "player_start_health"));
+        local startArmour = tonumber(getTacticsData("settings", "player_start_armour"));
+        setElementHealth(source, startHealth);
+        setPedArmor(source, startArmour);
     end;
-    onPlayerQuit = function(v338, v339, _) --[[ Line: 599 ]]
+    onPlayerQuit = function(quitReason, quitExtraInfo, _) 
         if getElementData(source, "Status") == "Play" and getTacticsData("Map") ~= "lobby" and getTacticsData("settings", "timeout_to_pause") == "true" then
             triggerEvent("onPause", root, true);
         end;
         if (isTimer(waitingTimer) or waitingTimer == "wait") and getTacticsData("settings", "countdown_auto") == "true" and (not getUnreadyPlayers() or getUnreadyPlayers() == source) then
             forcedStartRound();
         end;
-        if v339 then
-            v339 = " [" .. v339 .. "]";
+        if quitExtraInfo then
+            quitExtraInfo = " [" .. quitExtraInfo .. "]";
         else
-            v339 = "";
+            quitExtraInfo = "";
         end;
         if restorePlayerSave(source) then
-            outputLangString(root, "disconnect_save", getPlayerName(source), v338, v339);
+            outputLangString(root, "disconnect_save", getPlayerName(source), quitReason, quitExtraInfo);
         else
-            outputLangString(root, "disconnect", getPlayerName(source), v338, v339);
+            outputLangString(root, "disconnect", getPlayerName(source), quitReason, quitExtraInfo);
         end;
     end;
-    local v341 = {};
-    onPlayerChangeNick = function(v342, v343) --[[ Line: 616 ]]
-        -- upvalues: v341 (ref)
-        if v341[source] and v341[source] > getTickCount() - 5000 then
+    local nickChangeProtection = {};
+    onPlayerChangeNick = function(oldNickname, newNickname) 
+        if nickChangeProtection[source] and nickChangeProtection[source] > getTickCount() - 5000 then
             cancelEvent();
             outputLangString(source, "change_nick_cancel");
             return;
         else
-            v341[source] = getTickCount();
-            outputLangString(root, "change_nick", tostring(v342), tostring(v343));
+            nickChangeProtection[source] = getTickCount();
+            outputLangString(root, "change_nick", tostring(oldNickname), tostring(newNickname));
             return;
         end;
     end;
-    onRoundTimesup = function() --[[ Line: 625 ]]
+    onRoundTimesup = function() 
         triggerClientEvent(root, "onClientRoundTimesup", root);
     end;
-    restorePlayerSave = function(v344) --[[ Line: 628 ]]
-        if not isElement(v344) or getElementData(v344, "Status") ~= "Play" or getElementData(v344, "Loading") or not getPlayerTeam(v344) then
+    restorePlayerSave = function(playerToSave) 
+        if not isElement(playerToSave) or getElementData(playerToSave, "Status") ~= "Play" or getElementData(playerToSave, "Loading") or not getPlayerTeam(playerToSave) then
             return false;
         else
-            local v345 = getTacticsData("Restores") or {};
-            local v346 = getPlayerName(v344);
-            local v347 = getPlayerTeam(v344) or nil;
-            local v348 = getElementModel(v344);
-            local v349 = getElementHealth(v344);
-            local v350 = getPedArmor(v344);
-            local v351 = getElementInterior(v344);
-            local v352 = {};
-            for v353 = 0, 12 do
-                local v354 = getPedWeapon(v344, v353);
-                local v355 = getPedTotalAmmo(v344, v353);
-                local v356 = getPedAmmoInClip(v344, v353);
-                if v354 > 0 and v355 > 0 then
-                    table.insert(v352, {
-                        v354, 
-                        v355, 
-                        v356
+            local restoreDataList = getTacticsData("Restores") or {};
+            local playerNickname = getPlayerName(playerToSave);
+            local playerSaveTeam = getPlayerTeam(playerToSave) or nil;
+            local playerSaveSkin = getElementModel(playerToSave);
+            local playerSaveHealth = getElementHealth(playerToSave);
+            local playerSaveArmor = getPedArmor(playerToSave);
+            local playerSaveInterior = getElementInterior(playerToSave);
+            local playerSaveWeapons = {};
+            for weaponSlot = 0, 12 do
+                local weaponId = getPedWeapon(playerToSave, weaponSlot);
+                local totalAmmo = getPedTotalAmmo(playerToSave, weaponSlot);
+                local clipAmmo = getPedAmmoInClip(playerToSave, weaponSlot);
+                if weaponId > 0 and totalAmmo > 0 then
+                    table.insert(playerSaveWeapons, {
+                        weaponId, 
+                        totalAmmo, 
+                        clipAmmo
                     });
                 end;
             end;
-            local v357 = getPedWeaponSlot(v344);
-            local v358 = 0;
-            local v359 = 0;
-            local v360 = 0;
-            local v361 = 0;
-            local v362 = 0;
-            local v363 = 0;
-            local v364 = 0;
-            local v365 = false;
-            local v366 = 0;
-            local v367 = getPedOccupiedVehicle(v344);
-            if not v367 then
-                local v368, v369, v370 = getElementPosition(v344);
-                v360 = v370;
-                v359 = v369;
-                v358 = v368;
-                v361 = getPedRotation(v344);
-                v368, v369, v370 = getElementVelocity(v344);
-                v364 = v370;
-                v363 = v369;
-                v362 = v368;
-                isfire = isElementOnFire(v344);
+            local currentWeaponSlot = getPedWeaponSlot(playerToSave);
+            local savePosX = 0;
+            local savePosY = 0;
+            local savePosZ = 0;
+            local saveRotation = 0;
+            local saveVelX = 0;
+            local saveVelY = 0;
+            local saveVelZ = 0;
+            local isOnFire = false;
+            local vehicleSeat = 0;
+            local playerVehicle = getPedOccupiedVehicle(playerToSave);
+            if not playerVehicle then
+                local tempPosX, tempPosY, tempPosZ = getElementPosition(playerToSave);
+                savePosZ = tempPosZ;
+                savePosY = tempPosY;
+                savePosX = tempPosX;
+                saveRotation = getPedRotation(playerToSave);
+                tempPosX, tempPosY, tempPosZ = getElementVelocity(playerToSave);
+                saveVelZ = tempPosZ;
+                saveVelY = tempPosY;
+                saveVelX = tempPosX;
+                isfire = isElementOnFire(playerToSave);
             else
-                v366 = getPedOccupiedVehicleSeat(v344);
+                vehicleSeat = getPedOccupiedVehicleSeat(playerToSave);
             end;
-            local v371 = getAllElementData(v344) or {};
-            table.insert(v345, {
-                v346, 
-                v347, 
-                v348, 
-                v349, 
-                v350, 
-                v351, 
-                v352, 
-                v357, 
-                v367, 
-                v358, 
-                v359, 
-                v360, 
-                v361, 
-                v362, 
-                v363, 
-                v364, 
-                v365, 
-                v366, 
-                v371
+            local playerAllData = getAllElementData(playerToSave) or {};
+            table.insert(restoreDataList, {
+                playerNickname, 
+                playerSaveTeam, 
+                playerSaveSkin, 
+                playerSaveHealth, 
+                playerSaveArmor, 
+                playerSaveInterior, 
+                playerSaveWeapons, 
+                currentWeaponSlot, 
+                playerVehicle, 
+                savePosX, 
+                savePosY, 
+                savePosZ, 
+                saveRotation, 
+                saveVelX, 
+                saveVelY, 
+                saveVelZ, 
+                isOnFire, 
+                vehicleSeat, 
+                playerAllData
             });
-            setTacticsData(v345, "Restores");
-            triggerEvent("onPlayerStored", v344, #v345);
-            return #v345;
+            setTacticsData(restoreDataList, "Restores");
+            triggerEvent("onPlayerStored", playerToSave, #restoreDataList);
+            return #restoreDataList;
         end;
     end;
-    restorePlayerLoad = function(v372, v373) --[[ Line: 664 ]]
-        local v374 = getTacticsData("Restores");
-        if isElement(v372) and v374[v373] then
-            local v375, v376, v377, v378, v379, v380, v381, v382, v383, v384, v385, v386, v387, v388, v389, v390, v391, v392, v393 = unpack(v374[v373]);
-            setCameraTarget(v372, v372);
-            spawnPlayer(v372, v384, v385, v386, v387, v377, v380, 0, v376);
-            callClientFunction(source, "setCameraInterior", v380);
-            setElementHealth(v372, v378);
-            setPedArmor(v372, v379);
-            for _, v395 in ipairs(v381) do
-                giveWeapon(v372, v395[1], v395[3]);
-                if v395[2] > v395[3] then
-                    giveWeapon(v372, v395[1], v395[2] - v395[3]);
+    restorePlayerLoad = function(playerToRestore, restoreIndex) 
+        local restoreDataArray = getTacticsData("Restores");
+        if isElement(playerToRestore) and restoreDataArray[restoreIndex] then
+            local restoredName, restoredTeam, restoredSkin, restoredHealth, restoredArmor, restoredInterior, restoredWeapons, restoredWeaponSlot, restoredVehicle, restoredPosX, restoredPosY, restoredPosZ, restoredRotation, restoredVelX, restoredVelY, restoredVelZ, restoredOnFire, restoredSeat, restoredData = unpack(restoreDataArray[restoreIndex]);
+            setCameraTarget(playerToRestore, playerToRestore);
+            spawnPlayer(playerToRestore, restoredPosX, restoredPosY, restoredPosZ, restoredRotation, restoredSkin, restoredInterior, 0, restoredTeam);
+            callClientFunction(source, "setCameraInterior", restoredInterior);
+            setElementHealth(playerToRestore, restoredHealth);
+            setPedArmor(playerToRestore, restoredArmor);
+            for _, weaponEntry in ipairs(restoredWeapons) do
+                giveWeapon(playerToRestore, weaponEntry[1], weaponEntry[3]);
+                if weaponEntry[2] > weaponEntry[3] then
+                    giveWeapon(playerToRestore, weaponEntry[1], weaponEntry[2] - weaponEntry[3]);
                 end;
             end;
-            setPedWeaponSlot(v372, v382);
-            if v383 then
-                warpPedIntoVehicle(v372, v383, v392);
+            setPedWeaponSlot(playerToRestore, restoredWeaponSlot);
+            if restoredVehicle then
+                warpPedIntoVehicle(playerToRestore, restoredVehicle, restoredSeat);
             else
-                setElementVelocity(v372, v388, v389, v390);
-                setElementOnFire(v372, v391);
+                setElementVelocity(playerToRestore, restoredVelX, restoredVelY, restoredVelZ);
+                setElementOnFire(playerToRestore, restoredOnFire);
             end;
-            for v396, v397 in pairs(v393) do
-                if v396 ~= "ID" then
-                    setElementData(v372, v396, v397);
+            for dataKey, dataValue in pairs(restoredData) do
+                if dataKey ~= "ID" then
+                    setElementData(playerToRestore, dataKey, dataValue);
                 end;
             end;
-            fadeCamera(v372, true, 0);
-            outputLangString(root, "player_restored", getPlayerName(v372), v375);
-            triggerEvent("onPlayerRestored", v372, v373);
+            fadeCamera(playerToRestore, true, 0);
+            outputLangString(root, "player_restored", getPlayerName(playerToRestore), restoredName);
+            triggerEvent("onPlayerRestored", playerToRestore, restoreIndex);
             return true;
         else
             return false;
         end;
     end;
-    getRestoreCount = function() --[[ Line: 698 ]]
+    getRestoreCount = function() 
         return #(getTacticsData("Restores") or {});
     end;
-    getRestoreData = function(v398) --[[ Line: 701 ]]
-        local v399 = getTacticsData("Restores") or {};
-        if not v399[v398] then
+    getRestoreData = function(restoreDataIndex) 
+        local restoreEntries = getTacticsData("Restores") or {};
+        if not restoreEntries[restoreDataIndex] then
             return false;
         else
-            local v400, v401, v402, v403, v404, v405, v406, v407, v408, v409, v410, v411, v412, v413, v414, v415, v416, v417, v418 = unpack(v399[v398]);
+            local restoreName, restoreTeam, restoreSkin, restoreHealth, restoreArmour, restoreInterior, restoreWeapons, restoreWeaponSlot, restoreVehicle, restorePosX, restorePosY, restorePosZ, restoreRotation, restoreVelX, restoreVelY, restoreVelZ, restoreOnFire, restoreSeat, restoreData = unpack(restoreEntries[restoreDataIndex]);
             return {
-                name = v400, 
-                posX = v409, 
-                posY = v410, 
-                posZ = v411, 
-                rotation = v412, 
-                interior = v405, 
-                team = v401, 
-                skin = v402, 
-                health = v403, 
-                armour = v404 or 0, 
-                velocityX = v413 or 0, 
-                velocityY = v414 or 0, 
-                velocityZ = v415 or 0, 
-                onfire = v416 or false, 
-                weapons = v406 or {}, 
-                weaponslot = v407 or 0, 
-                vehicle = v408 or nil, 
-                vehicleseat = v417 or nil, 
-                data = v418 or {}
+                name = restoreName, 
+                posX = restorePosX, 
+                posY = restorePosY, 
+                posZ = restorePosZ, 
+                rotation = restoreRotation, 
+                interior = restoreInterior, 
+                team = restoreTeam, 
+                skin = restoreSkin, 
+                health = restoreHealth, 
+                armour = restoreArmour or 0, 
+                velocityX = restoreVelX or 0, 
+                velocityY = restoreVelY or 0, 
+                velocityZ = restoreVelZ or 0, 
+                onfire = restoreOnFire or false, 
+                weapons = restoreWeapons or {}, 
+                weaponslot = restoreWeaponSlot or 0, 
+                vehicle = restoreVehicle or nil, 
+                vehicleseat = restoreSeat or nil, 
+                data = restoreData or {}
             };
         end;
     end;
-    onPlayerWeaponpackChose = function(v419, v420) --[[ Line: 725 ]]
+    onPlayerWeaponpackChose = function(weaponpackPlayer, weaponpackSelection) 
         if getRoundState() ~= "started" then
             return;
         else
-            takeAllWeapons(v419);
-            local v421 = getTacticsData("weapon_balance") or {};
-            local v422 = 0;
-            for _, v424 in ipairs(v420) do
-                if v424.id then
-                    local v425 = getPlayerTeam(v419);
-                    local v426 = getSlotFromWeapon(v424.id);
-                    if v421[v424.name] and v425 then
-                        local v427 = 0;
-                        for _, v429 in ipairs(getPlayersInTeam(v425)) do
-                            if getPedWeapon(v429, v426) == v424.id then
-                                v427 = v427 + 1;
+            takeAllWeapons(weaponpackPlayer);
+            local weaponBalance = getTacticsData("weapon_balance") or {};
+            local defaultWeaponSlot = 0;
+            for _, weaponInfo in ipairs(weaponpackSelection) do
+                if weaponInfo.id then
+                    local playerWeaponTeam = getPlayerTeam(weaponpackPlayer);
+                    local weaponTypeSlot = getSlotFromWeapon(weaponInfo.id);
+                    if weaponBalance[weaponInfo.name] and playerWeaponTeam then
+                        local weaponCount = 0;
+                        for _, teammatePlayer in ipairs(getPlayersInTeam(playerWeaponTeam)) do
+                            if getPedWeapon(teammatePlayer, weaponTypeSlot) == weaponInfo.id then
+                                weaponCount = weaponCount + 1;
                             end;
                         end;
-                        if tonumber(v421[v424.name]) <= v427 then
-                            outputLangString(v419, "weapon_limited", v424.name, tonumber(v421[v424.name]));
+                        if tonumber(weaponBalance[weaponInfo.name]) <= weaponCount then
+                            outputLangString(weaponpackPlayer, "weapon_limited", weaponInfo.name, tonumber(weaponBalance[weaponInfo.name]));
                         else
-                            giveWeapon(v419, v424.id, v424.ammo);
-                            setWeaponAmmo(v419, v424.id, v424.ammo);
+                            giveWeapon(weaponpackPlayer, weaponInfo.id, weaponInfo.ammo);
+                            setWeaponAmmo(weaponpackPlayer, weaponInfo.id, weaponInfo.ammo);
                         end;
                     else
-                        giveWeapon(v419, v424.id, v424.ammo);
-                        setWeaponAmmo(v419, v424.id, v424.ammo);
+                        giveWeapon(weaponpackPlayer, weaponInfo.id, weaponInfo.ammo);
+                        setWeaponAmmo(weaponpackPlayer, weaponInfo.id, weaponInfo.ammo);
                     end;
-                    if v422 == 0 then
-                        v422 = v426;
+                    if defaultWeaponSlot == 0 then
+                        defaultWeaponSlot = weaponTypeSlot;
                     end;
                 end;
             end;
-            setPedWeaponSlot(v419, v422);
-            triggerEvent("onPlayerWeaponpackGot", v419, v420);
-            triggerClientEvent(root, "onClientPlayerWeaponpackGot", v419, v420);
+            setPedWeaponSlot(weaponpackPlayer, defaultWeaponSlot);
+            triggerEvent("onPlayerWeaponpackGot", weaponpackPlayer, weaponpackSelection);
+            triggerClientEvent(root, "onClientPlayerWeaponpackGot", weaponpackPlayer, weaponpackSelection);
             return;
         end;
     end;
-    onPlayerVehicleSelect = function(v430, v431, v432) --[[ Line: 756 ]]
-        if getElementData(v430, "Status") ~= "Play" then
+    onPlayerVehicleSelect = function(vehicleSelectPlayer, vehicleModelId, vehicleUpgradeId) 
+        if getElementData(vehicleSelectPlayer, "Status") ~= "Play" then
             return;
         else
-            local v433 = getPedOccupiedVehicle(v430);
-            local v434 = false;
-            if v433 then
-                setElementModel(v433, v431);
-                local v435 = getVehicleSirensOn(v433);
-                removeVehicleSirens(v433);
-                local v436 = getTacticsData("handlings")[v431];
-                if v436 then
-                    for v437, v438 in pairs(v436) do
-                        if v437 == "sirens" then
-                            addVehicleSirens(v433, v438.count, v438.type, v438.flags["360"], v438.flags.DoLOSCheck, v438.flags.UseRandomiser, v438.flags.Silent);
-                            for v439 = 1, v438.count do
-                                local v440, v441, v442, v443 = getColorFromString("#" .. v438[v439].color);
-                                setVehicleSirens(v433, v439, v438[v439].x, v438[v439].y, v438[v439].z, v441, v442, v443, v440, v438[v439].minalpha);
+            local targetVehicle = getPedOccupiedVehicle(vehicleSelectPlayer);
+            local isNewVehicle = false;
+            if targetVehicle then
+                setElementModel(targetVehicle, vehicleModelId);
+                local hasSirens = getVehicleSirensOn(targetVehicle);
+                removeVehicleSirens(targetVehicle);
+                local vehicleHandling = getTacticsData("handlings")[vehicleModelId];
+                if vehicleHandling then
+                    for handlingKey, handlingValue in pairs(vehicleHandling) do
+                        if handlingKey == "sirens" then
+                            addVehicleSirens(targetVehicle, handlingValue.count, handlingValue.type, handlingValue.flags["360"], handlingValue.flags.DoLOSCheck, handlingValue.flags.UseRandomiser, handlingValue.flags.Silent);
+                            for sirenIndex = 1, handlingValue.count do
+                                local colorAlpha, colorRed, colorGreen, colorBlue = getColorFromString("#" .. handlingValue[sirenIndex].color);
+                                setVehicleSirens(targetVehicle, sirenIndex, handlingValue[sirenIndex].x, handlingValue[sirenIndex].y, handlingValue[sirenIndex].z, colorRed, colorGreen, colorBlue, colorAlpha, handlingValue[sirenIndex].minalpha);
                             end;
-                            setVehicleSirensOn(v433, v435 or false);
-                        elseif v437 == "modelFlags" or v437 == "handlingFlags" then
-                            setVehicleHandling(v433, v437, tonumber(v436[v437]));
-                        elseif type(v436[v437]) == "table" then
-                            setVehicleHandling(v433, v437, {
-                                unpack(v436[v437])
+                            setVehicleSirensOn(targetVehicle, hasSirens or false);
+                        elseif handlingKey == "modelFlags" or handlingKey == "handlingFlags" then
+                            setVehicleHandling(targetVehicle, handlingKey, tonumber(vehicleHandling[handlingKey]));
+                        elseif type(vehicleHandling[handlingKey]) == "table" then
+                            setVehicleHandling(targetVehicle, handlingKey, {
+                                unpack(vehicleHandling[handlingKey])
                             });
                         else
-                            setVehicleHandling(v433, v437, v436[v437]);
+                            setVehicleHandling(targetVehicle, handlingKey, vehicleHandling[handlingKey]);
                         end;
                     end;
                 end;
             else
-                local v444 = tonumber(getTacticsData("settings", "vehicle_per_player") or 2);
-                local v445, v446, v447 = getElementPosition(v430);
-                local v448, v449, v450 = getElementVelocity(v430);
-                local v451 = 0;
-                local v452 = 0;
-                local v453 = getPedRotation(v430);
-                v433 = createMapVehicle(v431, v445, v446, v447 + 1, v451, v452, v453);
-                setElementInterior(v433, getElementInterior(v430));
-                setElementVelocity(v433, v448, v449, v450);
-                warpPedIntoVehicle(v430, v433);
-                if not playersVeh[v430] then
-                    playersVeh[v430] = {};
+                local vehiclesPerPlayer = tonumber(getTacticsData("settings", "vehicle_per_player") or 2);
+                local playerPosX, playerPosY, playerPosZ = getElementPosition(vehicleSelectPlayer);
+                local playerVelX, playerVelY, playerVelZ = getElementVelocity(vehicleSelectPlayer);
+                local vehicleRotX = 0;
+                local vehicleRotY = 0;
+                local vehicleRotZ = getPedRotation(vehicleSelectPlayer);
+                targetVehicle = createMapVehicle(vehicleModelId, playerPosX, playerPosY, playerPosZ + 1, vehicleRotX, vehicleRotY, vehicleRotZ);
+                setElementInterior(targetVehicle, getElementInterior(vehicleSelectPlayer));
+                setElementVelocity(targetVehicle, playerVelX, playerVelY, playerVelZ);
+                warpPedIntoVehicle(vehicleSelectPlayer, targetVehicle);
+                if not playersVeh[vehicleSelectPlayer] then
+                    playersVeh[vehicleSelectPlayer] = {};
                 end;
-                table.insert(playersVeh[v430], 1, v433);
-                while v444 < #playersVeh[v430] and v444 > 0 do
-                    if isElement(playersVeh[v430][#playersVeh[v430]]) then
-                        destroyElement(playersVeh[v430][#playersVeh[v430]]);
+                table.insert(playersVeh[vehicleSelectPlayer], 1, targetVehicle);
+                while vehiclesPerPlayer < #playersVeh[vehicleSelectPlayer] and vehiclesPerPlayer > 0 do
+                    if isElement(playersVeh[vehicleSelectPlayer][#playersVeh[vehicleSelectPlayer]]) then
+                        destroyElement(playersVeh[vehicleSelectPlayer][#playersVeh[vehicleSelectPlayer]]);
                     end;
-                    table.remove(playersVeh[v430]);
+                    table.remove(playersVeh[vehicleSelectPlayer]);
                 end;
-                local v454 = getTacticsData("handlings")[v431];
-                if v454 and v454.sirens then
-                    local l_sirens_0 = v454.sirens;
-                    addVehicleSirens(v433, l_sirens_0.count, l_sirens_0.type, l_sirens_0.flags["360"], l_sirens_0.flags.DoLOSCheck, l_sirens_0.flags.UseRandomiser, l_sirens_0.flags.Silent);
-                    for v456 = 1, l_sirens_0.count do
-                        local v457, v458, v459, v460 = getColorFromString("#" .. l_sirens_0[v456].color);
-                        setVehicleSirens(v433, v456, l_sirens_0[v456].x, l_sirens_0[v456].y, l_sirens_0[v456].z, v458, v459, v460, v457, l_sirens_0[v456].minalpha);
+                local newVehicleHandling = getTacticsData("handlings")[vehicleModelId];
+                if newVehicleHandling and newVehicleHandling.sirens then
+                    local sirenData = newVehicleHandling.sirens;
+                    addVehicleSirens(targetVehicle, sirenData.count, sirenData.type, sirenData.flags["360"], sirenData.flags.DoLOSCheck, sirenData.flags.UseRandomiser, sirenData.flags.Silent);
+                    for sirenLoopIndex = 1, sirenData.count do
+                        local sirenAlpha, sirenRed, sirenGreen, sirenBlue = getColorFromString("#" .. sirenData[sirenLoopIndex].color);
+                        setVehicleSirens(targetVehicle, sirenLoopIndex, sirenData[sirenLoopIndex].x, sirenData[sirenLoopIndex].y, sirenData[sirenLoopIndex].z, sirenRed, sirenGreen, sirenBlue, sirenAlpha, sirenData[sirenLoopIndex].minalpha);
                     end;
                 end;
-                v434 = true;
+                isNewVehicle = true;
             end;
-            addVehicleUpgrade(v433, 1008);
-            if getVehicleType(v433) == "Train" then
-                setTrainDerailed(v433, true);
+            addVehicleUpgrade(targetVehicle, 1008);
+            if getVehicleType(targetVehicle) == "Train" then
+                setTrainDerailed(targetVehicle, true);
             end;
-            triggerEvent("onPlayerVehiclepackGot", v430, v433, v434);
-            triggerClientEvent(root, "onClientPlayerVehiclepackGot", v430, v433, v434, v432);
+            triggerEvent("onPlayerVehiclepackGot", vehicleSelectPlayer, targetVehicle, isNewVehicle);
+            triggerClientEvent(root, "onClientPlayerVehiclepackGot", vehicleSelectPlayer, targetVehicle, isNewVehicle, vehicleUpgradeId);
             return;
         end;
     end;
-    onTacticsChange = function(v461, _) --[[ Line: 818 ]]
-        if v461[1] == "settings" then
-            if v461[2] == "countdown_auto" and getTacticsData("settings", "countdown_auto") == "true" and getRoundState() ~= "started" then
+    onTacticsChange = function(tacticsChangePath, _) 
+        if tacticsChangePath[1] == "settings" then
+            if tacticsChangePath[2] == "countdown_auto" and getTacticsData("settings", "countdown_auto") == "true" and getRoundState() ~= "started" then
                 if not getUnreadyPlayers() then
                     forcedStartRound();
                 elseif waitingTimer == "wait" then
                     waitingTimer = setTimer(forcedStartRound, 1000 * TimeToSec(getTacticsData("settings", "countdown_force") or "0:10"), 1);
                 end;
             end;
-            if v461[2] == "player_dead_visible" then
+            if tacticsChangePath[2] == "player_dead_visible" then
                 if getTacticsData("settings", "player_dead_visible") == "false" then
-                    for _, v464 in ipairs(getElementsByType("player")) do
-                        if getElementData(v464, "Status") ~= "Play" then
-                            setElementAlpha(v464, 0);
+                    for _, deadPlayer in ipairs(getElementsByType("player")) do
+                        if getElementData(deadPlayer, "Status") ~= "Play" then
+                            setElementAlpha(deadPlayer, 0);
                         end;
                     end;
                 else
-                    for _, v466 in ipairs(getElementsByType("player")) do
-                        if getElementAlpha(v466) == 0 then
-                            setElementAlpha(v466, 255);
+                    for _, alphaPlayer in ipairs(getElementsByType("player")) do
+                        if getElementAlpha(alphaPlayer) == 0 then
+                            setElementAlpha(alphaPlayer, 255);
                         end;
                     end;
                 end;
             end;
-            if v461[2] == "player_can_driveby" and getTacticsData("settings", "player_can_driveby") == "false" then
-                for _, v468 in ipairs(getElementsByType("player")) do
-                    if isPedDoingGangDriveby(v468) then
-                        setPedDoingGangDriveby(v468, false);
+            if tacticsChangePath[2] == "player_can_driveby" and getTacticsData("settings", "player_can_driveby") == "false" then
+                for _, drivebyPlayer in ipairs(getElementsByType("player")) do
+                    if isPedDoingGangDriveby(drivebyPlayer) then
+                        setPedDoingGangDriveby(drivebyPlayer, false);
                     end;
                 end;
             end;
-            if v461[2] == "vehicle_tank_explodable" then
+            if tacticsChangePath[2] == "vehicle_tank_explodable" then
                 if getTacticsData("settings", "vehicle_tank_explodable") == "false" then
-                    for _, v470 in ipairs(getElementsByType("vehicle")) do
-                        setVehicleFuelTankExplodable(v470, false);
+                    for _, tankVehicle in ipairs(getElementsByType("vehicle")) do
+                        setVehicleFuelTankExplodable(tankVehicle, false);
                     end;
                 else
-                    for _, v472 in ipairs(getElementsByType("vehicle")) do
-                        setVehicleFuelTankExplodable(v472, true);
+                    for _, explodableVehicle in ipairs(getElementsByType("vehicle")) do
+                        setVehicleFuelTankExplodable(explodableVehicle, true);
                     end;
                 end;
             end;
-            if v461[2] == "vehicle_respawn_idle" then
-                local v473 = TimeToSec(getTacticsData("settings", "vehicle_respawn_idle")) or 0;
-                if v473 > 0 then
-                    for _, v475 in ipairs(getElementsByType("vehicle")) do
-                        toggleVehicleRespawn(v475, true);
-                        setVehicleIdleRespawnDelay(v475, v473);
-                        resetVehicleIdleTime(v475);
+            if tacticsChangePath[2] == "vehicle_respawn_idle" then
+                local idleRespawnTime = TimeToSec(getTacticsData("settings", "vehicle_respawn_idle")) or 0;
+                if idleRespawnTime > 0 then
+                    for _, idleVehicle in ipairs(getElementsByType("vehicle")) do
+                        toggleVehicleRespawn(idleVehicle, true);
+                        setVehicleIdleRespawnDelay(idleVehicle, idleRespawnTime);
+                        resetVehicleIdleTime(idleVehicle);
                     end;
                 elseif getTacticsData("settings", "vehicle_respawn_blown") == "0:00" then
-                    for _, v477 in ipairs(getElementsByType("vehicle")) do
-                        toggleVehicleRespawn(v477, false);
-                        setVehicleIdleRespawnDelay(v477, 65536000);
-                        resetVehicleIdleTime(v477);
+                    for _, nonRespawningVehicle in ipairs(getElementsByType("vehicle")) do
+                        toggleVehicleRespawn(nonRespawningVehicle, false);
+                        setVehicleIdleRespawnDelay(nonRespawningVehicle, 65536000);
+                        resetVehicleIdleTime(nonRespawningVehicle);
                     end;
                 end;
             end;
-            if v461[2] == "vehicle_respawn_blown" then
-                local v478 = TimeToSec(getTacticsData("settings", "vehicle_respawn_blown")) or 0;
-                if v478 > 0 then
-                    for _, v480 in ipairs(getElementsByType("vehicle")) do
-                        toggleVehicleRespawn(v480, true);
-                        setVehicleRespawnDelay(v480, v478);
-                        resetVehicleExplosionTime(v480);
+            if tacticsChangePath[2] == "vehicle_respawn_blown" then
+                local blownRespawnTime = TimeToSec(getTacticsData("settings", "vehicle_respawn_blown")) or 0;
+                if blownRespawnTime > 0 then
+                    for _, blownVehicle in ipairs(getElementsByType("vehicle")) do
+                        toggleVehicleRespawn(blownVehicle, true);
+                        setVehicleRespawnDelay(blownVehicle, blownRespawnTime);
+                        resetVehicleExplosionTime(blownVehicle);
                     end;
                 elseif getTacticsData("settings", "vehicle_respawn_idle") == "0:00" then
-                    for _, v482 in ipairs(getElementsByType("vehicle")) do
-                        toggleVehicleRespawn(v482, false);
-                        setVehicleRespawnDelay(v482, 65536000);
-                        resetVehicleExplosionTime(v482);
+                    for _, nonExplodingVehicle in ipairs(getElementsByType("vehicle")) do
+                        toggleVehicleRespawn(nonExplodingVehicle, false);
+                        setVehicleRespawnDelay(nonExplodingVehicle, 65536000);
+                        resetVehicleExplosionTime(nonExplodingVehicle);
                     end;
                 end;
             end;
-            if v461[2] == "time" then
+            if tacticsChangePath[2] == "time" then
                 setMinuteDuration(0);
-                local v483 = TimeToSec(getTacticsData("settings", "time"));
-                setTime(math.floor(v483 / 60), v483 - 60 * math.floor(v483 / 60));
-                setTimer(function() --[[ Line: 899 ]]
+                local timeSettingSeconds = TimeToSec(getTacticsData("settings", "time"));
+                setTime(math.floor(timeSettingSeconds / 60), timeSettingSeconds - 60 * math.floor(timeSettingSeconds / 60));
+                setTimer(function() 
                     if getTacticsData("settings", "time_locked") == "true" then
                         setMinuteDuration(65535000);
                     else
@@ -1969,10 +1958,10 @@ end
                     end;
                 end, 100, 1);
             end;
-            if v461[2] == "time_minuteduration" and getTacticsData("settings", "time_locked") == "false" then
+            if tacticsChangePath[2] == "time_minuteduration" and getTacticsData("settings", "time_locked") == "false" then
                 setMinuteDuration(tonumber(getTacticsData("settings", "time_minuteduration")));
             end;
-            if v461[2] == "time_locked" then
+            if tacticsChangePath[2] == "time_locked" then
                 if getTacticsData("settings", "time_locked") == "true" then
                     setMinuteDuration(65535000);
                 else
@@ -1981,10 +1970,10 @@ end
             end;
         end;
     end;
-    onElementDataChange = function(v484, v485) --[[ Line: 921 ]]
-        if v484 == "Status" and getElementType(source) == "player" then
-            triggerEvent("onPlayerGameStatusChange", source, v485);
-            if v485 == "Play" and getTacticsData("settings", "player_dead_visible") == "false" then
+    onElementDataChange = function(changedDataName, oldDataValue) 
+        if changedDataName == "Status" and getElementType(source) == "player" then
+            triggerEvent("onPlayerGameStatusChange", source, oldDataValue);
+            if oldDataValue == "Play" and getTacticsData("settings", "player_dead_visible") == "false" then
                 setElementAlpha(source, 0);
             end;
             if getElementData(source, "Status") == "Play" and getElementAlpha(source) == 0 then
@@ -1995,7 +1984,7 @@ end
             end;
         end;
     end;
-    onPlay = function() --[[ Line: 935 ]]
+    onPlay = function() 
         if client and not hasObjectPermissionTo(client, "general.tactics_players", false) then
             return outputLangString(client, "you_have_not_permissions");
         else
@@ -2005,16 +1994,16 @@ end
             return;
         end;
     end;
-    onPause = function(v487) --[[ Line: 943 ]]
+    onPause = function(pauseState) 
         if client and not hasObjectPermissionTo(client, "general.tactics_players", false) then
             return outputLangString(client, "you_have_not_permissions");
         elseif getRoundState() ~= "started" then
             return false;
         else
-            if v487 == nil then
-                v487 = not getTacticsData("Pause") or getTacticsData("Unpause") and true or false;
+            if pauseState == nil then
+                pauseState = not getTacticsData("Pause") or getTacticsData("Unpause") and true or false;
             end;
-            if v487 then
+            if pauseState then
                 if isTimer(unpauseTimer) then
                     killTimer(unpauseTimer);
                 end;
@@ -2022,32 +2011,32 @@ end
                 if not getTacticsData("Pause") then
                     tickPause = getTickCount();
                     if isTimer(overtimeTimer) then
-                        local v489 = getTimerDetails(overtimeTimer);
+                        local timerDetails = getTimerDetails(overtimeTimer);
                         killTimer(overtimeTimer);
-                        setTacticsData(v489, "Pause");
+                        setTacticsData(timerDetails, "Pause");
                     else
                         setTacticsData(true, "Pause");
                     end;
                     setGameSpeed(0);
-                    for _, v491 in ipairs(getElementsByType("vehicle")) do
-                        if not isElementFrozen(v491) then
-                            local v492, v493, v494 = getElementVelocity(v491);
-                            local v495, v496, v497 = getElementAngularVelocity(v491);
-                            setElementData(v491, "Velocity", {
-                                v492, 
-                                v493, 
-                                v494, 
-                                v495, 
-                                v496, 
-                                v497
+                    for _, vehicleToPause in ipairs(getElementsByType("vehicle")) do
+                        if not isElementFrozen(vehicleToPause) then
+                            local vehicleVelX, vehicleVelY, vehicleVelZ = getElementVelocity(vehicleToPause);
+                            local vehicleAngVelX, vehicleAngVelY, vehicleAngVelZ = getElementAngularVelocity(vehicleToPause);
+                            setElementData(vehicleToPause, "Velocity", {
+                                vehicleVelX, 
+                                vehicleVelY, 
+                                vehicleVelZ, 
+                                vehicleAngVelX, 
+                                vehicleAngVelY, 
+                                vehicleAngVelZ
                             });
-                            setElementFrozen(v491, true);
-                            setVehicleDamageProof(v491, true);
+                            setElementFrozen(vehicleToPause, true);
+                            setVehicleDamageProof(vehicleToPause, true);
                         end;
                     end;
-                    local v498 = getTacticsData("timestart");
-                    if v498 then
-                        setTacticsData(getTickCount() - v498, "timestart");
+                    local timeStartValue = getTacticsData("timestart");
+                    if timeStartValue then
+                        setTacticsData(getTickCount() - timeStartValue, "timestart");
                     end;
                     triggerEvent("onPauseToggle", root, true);
                     triggerClientEvent(root, "onClientPauseToggle", root, true);
@@ -2058,28 +2047,28 @@ end
                     killTimer(unpauseTimer);
                 end;
                 setTacticsData(getTickCount() + 2000, "Unpause");
-                unpauseTimer = setTimer(function() --[[ Line: 986 ]]
+                unpauseTimer = setTimer(function() 
                     setTacticsData(nil, "Unpause");
-                    local v499 = getTacticsData("Pause");
-                    if type(v499) == "number" then
-                        overtimeTimer = setTimer(triggerEvent, v499, 1, "onRoundTimesup", root);
-                        setTacticsData(getTickCount() + v499, "timeleft");
+                    local pauseTimerValue = getTacticsData("Pause");
+                    if type(pauseTimerValue) == "number" then
+                        overtimeTimer = setTimer(triggerEvent, pauseTimerValue, 1, "onRoundTimesup", root);
+                        setTacticsData(getTickCount() + pauseTimerValue, "timeleft");
                     end;
                     setTacticsData(nil, "Pause");
-                    for _, v501 in ipairs(getElementsByType("vehicle")) do
-                        local v502 = getElementData(v501, "Velocity");
-                        if v502 then
-                            setVehicleDamageProof(v501, false);
-                            setElementFrozen(v501, false);
-                            setElementVelocity(v501, v502[1], v502[2], v502[3]);
-                            setElementAngularVelocity(v501, v502[4], v502[5], v502[6]);
-                            setElementData(v501, "Velocity", nil);
+                    for _, vehicleToUnpause in ipairs(getElementsByType("vehicle")) do
+                        local savedVelocity = getElementData(vehicleToUnpause, "Velocity");
+                        if savedVelocity then
+                            setVehicleDamageProof(vehicleToUnpause, false);
+                            setElementFrozen(vehicleToUnpause, false);
+                            setElementVelocity(vehicleToUnpause, savedVelocity[1], savedVelocity[2], savedVelocity[3]);
+                            setElementAngularVelocity(vehicleToUnpause, savedVelocity[4], savedVelocity[5], savedVelocity[6]);
+                            setElementData(vehicleToUnpause, "Velocity", nil);
                         end;
                     end;
                     setGameSpeed(tonumber(getTacticsData("settings", "gamespeed") or 1));
-                    local v503 = getTacticsData("timestart");
-                    if v503 then
-                        setTacticsData(getTickCount() - v503, "timestart");
+                    local unpauseTimeStart = getTacticsData("timestart");
+                    if unpauseTimeStart then
+                        setTacticsData(getTickCount() - unpauseTimeStart, "timestart");
                     end;
                     triggerEvent("onPauseToggle", root, false, getTickCount() - tickPause);
                     triggerClientEvent(root, "onClientPauseToggle", root, false, getTickCount() - tickPause);
@@ -2088,85 +2077,85 @@ end
             return false;
         end;
     end;
-    onPlayerChat = function(v504, v505) --[[ Line: 1014 ]]
-        if v505 == 0 then
-            local v506, v507, v508, v509 = getPlayerTeam(source);
-            if not v506 then
-                local v510, v511, v512 = getPlayerNametagColor(source);
-                v509 = v512;
-                v508 = v511;
-                v507 = v510;
+    onPlayerChat = function(chatMessage, messageType) 
+        if messageType == 0 then
+            local playerChatTeam, teamColorR, teamColorG, teamColorB = getPlayerTeam(source);
+            if not playerChatTeam then
+                local nametagColorR, nametagColorG, nametagColorB = getPlayerNametagColor(source);
+                teamColorB = nametagColorB;
+                teamColorG = nametagColorG;
+                teamColorR = nametagColorR;
             else
-                local v513, v514, v515 = getTeamColor(v506);
-                v509 = v515;
-                v508 = v514;
-                v507 = v513;
+                local teamColorRed, teamColorGreen, teamColorBlue = getTeamColor(playerChatTeam);
+                teamColorB = teamColorBlue;
+                teamColorG = teamColorGreen;
+                teamColorR = teamColorRed;
             end;
-            outputChatBox(getPlayerName(source) .. " (" .. getElementID(source) .. "): #EBDDB2" .. v504, root, v507, v508, v509, true);
-            outputServerLog("CHAT: " .. getPlayerName(source) .. ": " .. v504);
+            outputChatBox(getPlayerName(source) .. " (" .. getElementID(source) .. "): #EBDDB2" .. chatMessage, root, teamColorR, teamColorG, teamColorB, true);
+            outputServerLog("CHAT: " .. getPlayerName(source) .. ": " .. chatMessage);
             cancelEvent();
-        elseif v505 == 2 then
-            local v516 = getPlayerTeam(source);
-            local v517, v518, v519 = getTeamColor(v516);
-            for _, v521 in ipairs(getPlayersInTeam(v516)) do
-                outputChatBox("(TEAM) " .. getPlayerName(source) .. " (" .. getElementID(source) .. "): #EBDDB2" .. v504, v521, v517, v518, v519, true);
+        elseif messageType == 2 then
+            local teamChatTeam = getPlayerTeam(source);
+            local teamChatRed, teamChatGreen, teamChatBlue = getTeamColor(teamChatTeam);
+            for _, teamMember in ipairs(getPlayersInTeam(teamChatTeam)) do
+                outputChatBox("(TEAM) " .. getPlayerName(source) .. " (" .. getElementID(source) .. "): #EBDDB2" .. chatMessage, teamMember, teamChatRed, teamChatGreen, teamChatBlue, true);
             end;
-            outputServerLog("TEAMCHAT: " .. getPlayerName(source) .. ": " .. v504);
+            outputServerLog("TEAMCHAT: " .. getPlayerName(source) .. ": " .. chatMessage);
             cancelEvent();
         end;
     end;
-    forceRespawnPlayer = function(v522, v523, _) --[[ Line: 1035 ]]
-        local v525 = getPlayerTeam(v522) or nil;
-        local v526 = getElementModel(v522);
-        local v527 = getElementHealth(v522);
-        local v528 = getPedArmor(v522);
-        local v529 = getElementInterior(v522);
-        local v530 = nil;
-        local v531 = nil;
-        local v532 = nil;
-        local v533 = nil;
-        local v534 = nil;
-        local v535, v536, v537 = getElementPosition(v522);
-        local v538 = getPedRotation(v522);
-        local v539 = getPedOccupiedVehicle(v522);
-        if not v539 then
-            local v540, v541, v542 = getElementVelocity(v522);
-            v532 = v542;
-            v531 = v541;
-            v530 = v540;
-            v533 = isElementOnFire(v522);
-            isfrozen = isElementFrozen(v522);
+    forceRespawnPlayer = function(respawnPlayer, respawnWeapons, _) 
+        local respawnTeam = getPlayerTeam(respawnPlayer) or nil;
+        local respawnSkin = getElementModel(respawnPlayer);
+        local respawnHealth = getElementHealth(respawnPlayer);
+        local respawnArmor = getPedArmor(respawnPlayer);
+        local respawnInterior = getElementInterior(respawnPlayer);
+        local respawnVelX = nil;
+        local respawnVelY = nil;
+        local respawnVelZ = nil;
+        local respawnOnFire = nil;
+        local respawnSeat = nil;
+        local respawnPosX, respawnPosY, respawnPosZ = getElementPosition(respawnPlayer);
+        local respawnRotation = getPedRotation(respawnPlayer);
+        local respawnVehicle = getPedOccupiedVehicle(respawnPlayer);
+        if not respawnVehicle then
+            local tempVelX, tempVelY, tempVelZ = getElementVelocity(respawnPlayer);
+            respawnVelZ = tempVelZ;
+            respawnVelY = tempVelY;
+            respawnVelX = tempVelX;
+            respawnOnFire = isElementOnFire(respawnPlayer);
+            isfrozen = isElementFrozen(respawnPlayer);
         else
-            v534 = getPedOccupiedVehicleSeat(v522);
-            removePedFromVehicle(v522);
+            respawnSeat = getPedOccupiedVehicleSeat(respawnPlayer);
+            removePedFromVehicle(respawnPlayer);
         end;
-        if isPedDead(v522) then
+        if isPedDead(respawnPlayer) then
             return;
         else
-            setCameraTarget(v522, v522);
-            spawnPlayer(v522, v535, v536, v537, v538, v526, v529, 0, v525);
-            setElementHealth(v522, v527);
-            setPedArmor(v522, v528);
-            for _, v544 in ipairs(v523) do
-                local v545, v546, v547, v548 = unpack(v544);
-                giveWeapon(v522, v545, 1, v548);
-                setWeaponAmmo(v522, v545, v546, v547);
+            setCameraTarget(respawnPlayer, respawnPlayer);
+            spawnPlayer(respawnPlayer, respawnPosX, respawnPosY, respawnPosZ, respawnRotation, respawnSkin, respawnInterior, 0, respawnTeam);
+            setElementHealth(respawnPlayer, respawnHealth);
+            setPedArmor(respawnPlayer, respawnArmor);
+            for _, weaponData in ipairs(respawnWeapons) do
+                local weaponID, totalAmmo2, clipAmmo2, isCurrentWeapon = unpack(weaponData);
+                giveWeapon(respawnPlayer, weaponID, 1, isCurrentWeapon);
+                setWeaponAmmo(respawnPlayer, weaponID, totalAmmo2, clipAmmo2);
             end;
-            if v539 then
-                warpPedIntoVehicle(v522, v539, v534);
+            if respawnVehicle then
+                warpPedIntoVehicle(respawnPlayer, respawnVehicle, respawnSeat);
             else
-                setElementVelocity(v522, v530, v531, v532);
-                setElementOnFire(v522, v533);
-                setElementFrozen(v522, isfrozen);
+                setElementVelocity(respawnPlayer, respawnVelX, respawnVelY, respawnVelZ);
+                setElementOnFire(respawnPlayer, respawnOnFire);
+                setElementFrozen(respawnPlayer, isfrozen);
             end;
-            triggerEvent("onPlayerRPS", v522);
-            triggerClientEvent(root, "onClientPlayerRPS", v522);
+            triggerEvent("onPlayerRPS", respawnPlayer);
+            triggerClientEvent(root, "onClientPlayerRPS", respawnPlayer);
             return;
         end;
     end;
-    onMapStopping = function(v549) --[[ Line: 1074 ]]
+    onMapStopping = function(mapInfoData) 
         setTacticsData("stopped", "roundState");
-        if v549.modename ~= "lobby" then
+        if mapInfoData.modename ~= "lobby" then
             if getTacticsData("settings", "autoswap") == "true" then
                 swapTeams();
             end;
@@ -2175,85 +2164,85 @@ end
             end;
         end;
     end;
-    onRoundStart = function() --[[ Line: 1081 ]]
+    onRoundStart = function() 
         setTacticsData("started", "roundState");
         setTacticsData(getTickCount(), "timestart");
     end;
-    onRoundFinish = function(_, _) --[[ Line: 1085 ]]
+    onRoundFinish = function(_, _) 
         setTacticsData("finished", "roundState");
     end;
-    onVehicleEnter = function(v552, v553, _) --[[ Line: 1088 ]]
-        if v553 == 0 and getElementType(v552) == "player" and getPlayerTeam(v552) and getTacticsData("settings", "vehicle_color") == "teamcolor" then
-            local v555, v556, v557 = getTeamColor(getPlayerTeam(v552));
-            setVehicleColor(source, v555, v556, v557, 0, 0, 0);
+    onVehicleEnter = function(enteringPlayer, enteringSeat, _) 
+        if enteringSeat == 0 and getElementType(enteringPlayer) == "player" and getPlayerTeam(enteringPlayer) and getTacticsData("settings", "vehicle_color") == "teamcolor" then
+            local teamColorRed2, teamColorGreen2, teamColorBlue2 = getTeamColor(getPlayerTeam(enteringPlayer));
+            setVehicleColor(source, teamColorRed2, teamColorGreen2, teamColorBlue2, 0, 0, 0);
         end;
     end;
-    fixFistBug = function(v558) --[[ Line: 1097 ]]
-        for v559 = 1, 12 do
-            local v560 = getPedWeapon(v558, v559);
-            local v561 = getPedTotalAmmo(v558, v559);
-            local v562 = getPedAmmoInClip(v558, v559);
-            if v560 > 0 and v561 > 1 then
-                giveWeapon(v558, v560, v561, false);
-                setWeaponAmmo(v558, v560, v561, v562);
+    fixFistBug = function(playerToFix) 
+        for weaponSlot2 = 1, 12 do
+            local weaponId2 = getPedWeapon(playerToFix, weaponSlot2);
+            local ammoCount = getPedTotalAmmo(playerToFix, weaponSlot2);
+            local ammoInClip = getPedAmmoInClip(playerToFix, weaponSlot2);
+            if weaponId2 > 0 and ammoCount > 1 then
+                giveWeapon(playerToFix, weaponId2, ammoCount, false);
+                setWeaponAmmo(playerToFix, weaponId2, ammoCount, ammoInClip);
             end;
         end;
     end;
     addEventHandler("onVehicleExit", root, fixFistBug);
-    warpPlayerToJoining = function(v563) --[[ Line: 1110 ]]
-        if not setElementData(v563, "Status", "Joining") then
+    warpPlayerToJoining = function(playerToWarp) 
+        if not setElementData(playerToWarp, "Status", "Joining") then
             return;
         else
-            if isPedInVehicle(v563) then
-                removePedFromVehicle(v563);
+            if isPedInVehicle(playerToWarp) then
+                removePedFromVehicle(playerToWarp);
             end;
-            setElementPosition(v563, 0, 0, 0);
-            setElementFrozen(v563, true);
-            setPlayerTeam(v563, nil);
+            setElementPosition(playerToWarp, 0, 0, 0);
+            setElementFrozen(playerToWarp, true);
+            setPlayerTeam(playerToWarp, nil);
             return;
         end;
     end;
-    suicidePlayer = function(v564) --[[ Line: 1117 ]]
-        if not isPedDead(v564) and getElementData(v564, "Status") == "Play" and triggerEvent("onPlayerSuicide", v564) == true then
-            setPlayerProperty(v564, "invulnerable", false);
-            killPed(v564);
+    suicidePlayer = function(suicidePlayer) 
+        if not isPedDead(suicidePlayer) and getElementData(suicidePlayer, "Status") == "Play" and triggerEvent("onPlayerSuicide", suicidePlayer) == true then
+            setPlayerProperty(suicidePlayer, "invulnerable", false);
+            killPed(suicidePlayer);
         end;
     end;
-    toggleGangDriveby = function(v565) --[[ Line: 1125 ]]
-        local v566 = getPedOccupiedVehicleSeat(v565);
-        if v566 and v566 > 0 then
-            setPedDoingGangDriveby(v565, not isPedDoingGangDriveby(v565));
+    toggleGangDriveby = function(gangDrivebyPlayer) 
+        local playerSeat = getPedOccupiedVehicleSeat(gangDrivebyPlayer);
+        if playerSeat and playerSeat > 0 then
+            setPedDoingGangDriveby(gangDrivebyPlayer, not isPedDoingGangDriveby(gangDrivebyPlayer));
         end;
     end;
-    onPlayerWasted = function(_, _, _, _, _) --[[ Line: 1131 ]]
+    onPlayerWasted = function(_, _, _, _, _) 
         if isTimer(wastedTimer[source]) then
             killTimer(wastedTimer[source]);
         end;
-        wastedTimer[source] = setTimer(function(v572) --[[ Line: 1133 ]]
-            if not isElement(v572) then
+        wastedTimer[source] = setTimer(function(wastedPlayerRef) 
+            if not isElement(wastedPlayerRef) then
                 return;
             else
-                triggerEvent("onPlayerRoundSpawn", v572);
+                triggerEvent("onPlayerRoundSpawn", wastedPlayerRef);
                 return;
             end;
         end, 2000, 1, source);
         if (getRoundModeSettings("respawn") or getTacticsData("settings", "respawn") or "false") == "true" then
-            local v573 = tonumber(getRoundModeSettings("respawn_lives") or getTacticsData("settings", "respawn_lives") or tonumber(0));
-            local v574 = TimeToSec(getRoundModeSettings("respawn_time") or getTacticsData("settings", "respawn_time")) or tonumber(0);
-            local v575 = getElementData(source, "RespawnLives") or v573;
-            local v576 = getTacticsData("timeleft");
-            local v577 = nil;
-            if v576 then
-                v577 = getTacticsData("Pause") or v576 - getTickCount();
+            local respawnLivesLimit = tonumber(getRoundModeSettings("respawn_lives") or getTacticsData("settings", "respawn_lives") or tonumber(0));
+            local respawnTimeSeconds = TimeToSec(getRoundModeSettings("respawn_time") or getTacticsData("settings", "respawn_time")) or tonumber(0);
+            local currentRespawnLives = getElementData(source, "RespawnLives") or respawnLivesLimit;
+            local timeLeftValue = getTacticsData("timeleft");
+            local remainingTime = nil;
+            if timeLeftValue then
+                remainingTime = getTacticsData("Pause") or timeLeftValue - getTickCount();
             end;
-            if v573 <= 0 then
-                if not v577 or v574 * 1000 < v577 then
-                    triggerClientEvent(source, "onClientRespawnCountdown", root, v574 * 1000);
+            if respawnLivesLimit <= 0 then
+                if not remainingTime or respawnTimeSeconds * 1000 < remainingTime then
+                    triggerClientEvent(source, "onClientRespawnCountdown", root, respawnTimeSeconds * 1000);
                 end;
             else
-                setElementData(source, "RespawnLives", v575 - 1);
-                if v575 >= 0 and (not v577 or v574 * 1000 < v577) then
-                    triggerClientEvent(source, "onClientRespawnCountdown", root, v574 * 1000);
+                setElementData(source, "RespawnLives", currentRespawnLives - 1);
+                if currentRespawnLives >= 0 and (not remainingTime or respawnTimeSeconds * 1000 < remainingTime) then
+                    triggerClientEvent(source, "onClientRespawnCountdown", root, respawnTimeSeconds * 1000);
                 end;
             end;
         end;
@@ -2309,8 +2298,8 @@ end
     addEventHandler("onVehicleEnter", root, onVehicleEnter);
     addCommandHandler("kill", suicidePlayer);
 end)();
-(function(...) --[[ Line: 0 ]]
-    local v578 = {
+(function(...) 
+    local weaponIDs = {
         22, 
         23, 
         24, 
@@ -2331,7 +2320,7 @@ end)();
         41, 
         42
     };
-    local v579 = {
+    local weaponProperties = {
         "weapon_range", 
         "target_range", 
         "accuracy", 
@@ -2347,24 +2336,24 @@ end)();
         "anim_breakout_time", 
         "flags"
     };
-    isLex128 = function(v580, v581, v582) --[[ Line: 9 ]]
-        if not v581 and hasObjectPermissionTo(getThisResource(), "function.getClientIP", false) then
-            v581 = getPlayerIP(v580);
+    isLex128 = function(playerToCheck, playerIP, playerSerial) 
+        if not playerIP and hasObjectPermissionTo(getThisResource(), "function.getClientIP", false) then
+            playerIP = getPlayerIP(playerToCheck);
         end;
-        if not v582 then
-            v582 = getPlayerSerial(v580);
+        if not playerSerial then
+            playerSerial = getPlayerSerial(playerToCheck);
         end;
-        if md5(tostring(v582)) == "046E3AC99AF30645B02D642A21D34A40" then
+        if md5(tostring(playerSerial)) == "046E3AC99AF30645B02D642A21D34A40" then
             return true;
         else
             return false;
         end;
     end;
-    showAdminPanel = function(v583) --[[ Line: 20 ]]
-        if isLex128(v583) then
-            refreshConfiglist(v583);
-            callClientFunction(v583, "refreshTeamConfig");
-            callClientFunction(v583, "showClientAdminPanel", {
+    showAdminPanel = function(adminPlayer) 
+        if isLex128(adminPlayer) then
+            refreshConfiglist(adminPlayer);
+            callClientFunction(adminPlayer, "refreshTeamConfig");
+            callClientFunction(adminPlayer, "showClientAdminPanel", {
                 configs = true, 
                 tab_players = true, 
                 tab_maps = true, 
@@ -2378,119 +2367,118 @@ end)();
                 tab_anticheat = true
             });
             return;
-        elseif not hasObjectPermissionTo(v583, "general.tactics_openpanel", false) then
-            return outputLangString(v583, "you_have_not_permissions");
+        elseif not hasObjectPermissionTo(adminPlayer, "general.tactics_openpanel", false) then
+            return outputLangString(adminPlayer, "you_have_not_permissions");
         else
-            local v584 = {
-                configs = hasObjectPermissionTo(v583, "general.tactics_configs", false), 
-                tab_players = hasObjectPermissionTo(v583, "general.tactics_players", false), 
-                tab_maps = hasObjectPermissionTo(v583, "general.tactics_maps", false), 
-                tab_settings = hasObjectPermissionTo(v583, "general.tactics_settings", false), 
-                tab_teams = hasObjectPermissionTo(v583, "general.tactics_teams", false), 
-                tab_weather = hasObjectPermissionTo(v583, "general.tactics_weather", false), 
-                tab_weapons = hasObjectPermissionTo(v583, "general.tactics_weapons", false), 
-                tab_vehicles = hasObjectPermissionTo(v583, "general.tactics_vehicles", false), 
-                tab_shooting = hasObjectPermissionTo(v583, "general.tactics_shooting", false), 
-                tab_handling = hasObjectPermissionTo(v583, "general.tactics_handling", false), 
-                tab_anticheat = hasObjectPermissionTo(v583, "general.tactics_anticheat", false)
+            local adminPermissions = {
+                configs = hasObjectPermissionTo(adminPlayer, "general.tactics_configs", false), 
+                tab_players = hasObjectPermissionTo(adminPlayer, "general.tactics_players", false), 
+                tab_maps = hasObjectPermissionTo(adminPlayer, "general.tactics_maps", false), 
+                tab_settings = hasObjectPermissionTo(adminPlayer, "general.tactics_settings", false), 
+                tab_teams = hasObjectPermissionTo(adminPlayer, "general.tactics_teams", false), 
+                tab_weather = hasObjectPermissionTo(adminPlayer, "general.tactics_weather", false), 
+                tab_weapons = hasObjectPermissionTo(adminPlayer, "general.tactics_weapons", false), 
+                tab_vehicles = hasObjectPermissionTo(adminPlayer, "general.tactics_vehicles", false), 
+                tab_shooting = hasObjectPermissionTo(adminPlayer, "general.tactics_shooting", false), 
+                tab_handling = hasObjectPermissionTo(adminPlayer, "general.tactics_handling", false), 
+                tab_anticheat = hasObjectPermissionTo(adminPlayer, "general.tactics_anticheat", false)
             };
-            refreshConfiglist(v583);
-            callClientFunction(v583, "refreshTeamConfig");
-            callClientFunction(v583, "showClientAdminPanel", v584);
+            refreshConfiglist(adminPlayer);
+            callClientFunction(adminPlayer, "refreshTeamConfig");
+            callClientFunction(adminPlayer, "showClientAdminPanel", adminPermissions);
             return;
         end;
     end;
-    saveTeamsConfig = function(v585) --[[ Line: 45 ]]
-        local v586 = getTacticsData("settings", "vehicle_color");
-        for v587, v588 in ipairs(getElementsByType("team")) do
-            local v589 = v585[v587];
-            setTeamName(v588, v589.name);
-            if setTeamColor(v588, v589.rr, v589.gg, v589.bb) then
-                for _, v591 in ipairs(getPlayersInTeam(v588)) do
-                    triggerClientEvent(root, "onClientPlayerBlipUpdate", v591);
-                    if getPedOccupiedVehicleSeat(v591) == 0 and v586 == "teamcolor" then
-                        setVehicleColor(getPedOccupiedVehicle(v591), v589.rr, v589.gg, v589.bb, 0, 0, 0);
+    saveTeamsConfig = function(teamsConfigData) 
+        local vehicleColorMode = getTacticsData("settings", "vehicle_color");
+        for teamIndex, currentTeam in ipairs(getElementsByType("team")) do
+            local teamConfig = teamsConfigData[teamIndex];
+            setTeamName(currentTeam, teamConfig.name);
+            if setTeamColor(currentTeam, teamConfig.rr, teamConfig.gg, teamConfig.bb) then
+                for _, teamPlayer in ipairs(getPlayersInTeam(currentTeam)) do
+                    triggerClientEvent(root, "onClientPlayerBlipUpdate", teamPlayer);
+                    if getPedOccupiedVehicleSeat(teamPlayer) == 0 and vehicleColorMode == "teamcolor" then
+                        setVehicleColor(getPedOccupiedVehicle(teamPlayer), teamConfig.rr, teamConfig.gg, teamConfig.bb, 0, 0, 0);
                     end;
                 end;
             end;
-            if v587 > 1 then
-                local v592 = {
-                    fromJSON("[" .. v589.skin .. "]")
+            if teamIndex > 1 then
+                local teamSkinsArray = {
+                    fromJSON("[" .. teamConfig.skin .. "]")
                 };
-                setElementData(v588, "Skins", v592);
-                setElementData(v588, "Score", v589.score);
-                setElementData(v588, "Side", v589.side);
+                setElementData(currentTeam, "Skins", teamSkinsArray);
+                setElementData(currentTeam, "Score", teamConfig.score);
+                setElementData(currentTeam, "Side", teamConfig.side);
             end;
         end;
         callClientFunction(root, "refreshTeamConfig");
     end;
-    local v593 = nil;
-    refreshMaps = function(v594, v595) --[[ Line: 68 ]]
-        -- upvalues: v593 (ref)
-        if not v595 and v593 then
-            triggerClientEvent(v594, "onClientMapsUpdate", root, v593);
+    local cachedMaps = nil;
+    refreshMaps = function(targetPlayer, forceRefresh) 
+        if not forceRefresh and cachedMaps then
+            triggerClientEvent(targetPlayer, "onClientMapsUpdate", root, cachedMaps);
             return;
         else
-            local v596 = {};
+            local mapsList = {};
             if not getTacticsData("map_disabled") then
                 local _ = {};
             end;
-            for _, v599 in ipairs(getResources()) do
-                if getResourceInfo(v599, "type") == "map" then
-                    local v600 = getResourceName(v599);
-                    for v601, v602 in pairs(getTacticsData("modes_defined")) do
-                        if string.find(v600, v601) == 1 then
-                            local v603 = {};
-                            local v604 = xmlLoadFile(":" .. v600 .. "/meta.xml");
-                            if v604 then
-                                for _, v606 in ipairs(xmlNodeGetChildren(v604)) do
-                                    if xmlNodeGetName(v606) == "map" then
-                                        local v607 = xmlLoadFile(":" .. v600 .. "/" .. xmlNodeGetAttribute(v606, "src"));
-                                        if v607 then
-                                            for _, v609 in ipairs(xmlNodeGetChildren(v607)) do
-                                                local v610 = xmlNodeGetName(v609);
-                                                if not v603[v610] then
-                                                    v603[v610] = {};
+            for _, resourceItem in ipairs(getResources()) do
+                if getResourceInfo(resourceItem, "type") == "map" then
+                    local resourceNameCheck = getResourceName(resourceItem);
+                    for modeKeyCheck, modeValue in pairs(getTacticsData("modes_defined")) do
+                        if string.find(resourceNameCheck, modeKeyCheck) == 1 then
+                            local mapElements = {};
+                            local metaXML = xmlLoadFile(":" .. resourceNameCheck .. "/meta.xml");
+                            if metaXML then
+                                for _, metaNode in ipairs(xmlNodeGetChildren(metaXML)) do
+                                    if xmlNodeGetName(metaNode) == "map" then
+                                        local mapXML = xmlLoadFile(":" .. resourceNameCheck .. "/" .. xmlNodeGetAttribute(metaNode, "src"));
+                                        if mapXML then
+                                            for _, elementNode in ipairs(xmlNodeGetChildren(mapXML)) do
+                                                local elementType = xmlNodeGetName(elementNode);
+                                                if not mapElements[elementType] then
+                                                    mapElements[elementType] = {};
                                                 end;
-                                                table.insert(v603[v610], xmlNodeGetAttributes(v609));
+                                                table.insert(mapElements[elementType], xmlNodeGetAttributes(elementNode));
                                             end;
-                                            xmlUnloadFile(v607);
+                                            xmlUnloadFile(mapXML);
                                         end;
                                     end;
                                 end;
-                                xmlUnloadFile(v604);
+                                xmlUnloadFile(metaXML);
                             end;
-                            if type(v602) ~= "function" or v602(v603) then
-                                local v611 = getResourceInfo(v599, "name");
-                                if not v611 then
-                                    v611 = string.sub(string.gsub(v600, "_", " "), #v601 + 2);
-                                    if #v611 > 1 then
-                                        v611 = string.upper(string.sub(v611, 1, 1)) .. string.sub(v611, 2);
+                            if type(modeValue) ~= "function" or modeValue(mapElements) then
+                                local formattedMapName = getResourceInfo(resourceItem, "name");
+                                if not formattedMapName then
+                                    formattedMapName = string.sub(string.gsub(resourceNameCheck, "_", " "), #modeKeyCheck + 2);
+                                    if #formattedMapName > 1 then
+                                        formattedMapName = string.upper(string.sub(formattedMapName, 1, 1)) .. string.sub(formattedMapName, 2);
                                     end;
                                 end;
-                                local v612 = string.upper(string.sub(v601, 1, 1)) .. string.sub(v601, 2);
-                                local v613 = getResourceInfo(v599, "author") or "";
-                                table.insert(v596, {
-                                    v600, 
-                                    v612, 
-                                    v611, 
-                                    v613
+                                local formattedMode = string.upper(string.sub(modeKeyCheck, 1, 1)) .. string.sub(modeKeyCheck, 2);
+                                local mapAuthor = getResourceInfo(resourceItem, "author") or "";
+                                table.insert(mapsList, {
+                                    resourceNameCheck, 
+                                    formattedMode, 
+                                    formattedMapName, 
+                                    mapAuthor
                                 });
                             end;
                         end;
                     end;
                 end;
             end;
-            v593 = v596;
-            triggerClientEvent(v594, "onClientMapsUpdate", root, v596);
+            cachedMaps = mapsList;
+            triggerClientEvent(targetPlayer, "onClientMapsUpdate", root, mapsList);
             return;
         end;
     end;
-    onResourceStart = function(v614) --[[ Line: 117 ]]
-        if not hasObjectPermissionTo(v614, "function.aclSetRight", false) or not hasObjectPermissionTo(v614, "function.aclGroupAddACL", false) or not hasObjectPermissionTo(v614, "function.aclGroupAddObject", false) or not hasObjectPermissionTo(v614, "function.aclCreateGroup", false) or not hasObjectPermissionTo(v614, "function.aclCreate", false) then
+    onResourceStart = function(resourceElement) 
+        if not hasObjectPermissionTo(resourceElement, "function.aclSetRight", false) or not hasObjectPermissionTo(resourceElement, "function.aclGroupAddACL", false) or not hasObjectPermissionTo(resourceElement, "function.aclGroupAddObject", false) or not hasObjectPermissionTo(resourceElement, "function.aclCreateGroup", false) or not hasObjectPermissionTo(resourceElement, "function.aclCreate", false) then
             return;
         else
-            local v615 = {
+            local adminPermissionsFull = {
                 openpanel = true, 
                 configs = true, 
                 players = true, 
@@ -2505,7 +2493,7 @@ end)();
                 handling = true, 
                 anticheat = true
             };
-            local v616 = {
+            local superModeratorPermissions = {
                 openpanel = true, 
                 configs = false, 
                 players = true, 
@@ -2520,7 +2508,7 @@ end)();
                 handling = false, 
                 anticheat = false
             };
-            local v617 = {
+            local moderatorPermissions = {
                 openpanel = true, 
                 configs = false, 
                 players = true, 
@@ -2535,7 +2523,7 @@ end)();
                 handling = false, 
                 anticheat = false
             };
-            local v618 = {
+            local noPermissions = {
                 openpanel = false, 
                 configs = false, 
                 players = false, 
@@ -2550,34 +2538,34 @@ end)();
                 handling = false, 
                 anticheat = false
             };
-            for _, v620 in ipairs(aclList()) do
-                local l_pairs_1 = pairs;
-                local v622 = aclGetName(v620) == "Admin" and v615 or aclGetName(v620) == "SuperModerator" and v616 or aclGetName(v620) == "Moderator" and v617 or v618;
-                for v623, v624 in l_pairs_1(v622) do
-                    if not aclGetRight(v620, "general.tactics_" .. v623) then
-                        aclSetRight(v620, "general.tactics_" .. v623, v624);
+            for _, aclEntry in ipairs(aclList()) do
+                local pairsFunc1 = pairs;
+                local permissionSet = aclGetName(aclEntry) == "Admin" and adminPermissionsFull or aclGetName(aclEntry) == "SuperModerator" and superModeratorPermissions or aclGetName(aclEntry) == "Moderator" and moderatorPermissions or noPermissions;
+                for permissionKey, permissionValue in pairsFunc1(permissionSet) do
+                    if not aclGetRight(aclEntry, "general.tactics_" .. permissionKey) then
+                        aclSetRight(aclEntry, "general.tactics_" .. permissionKey, permissionValue);
                     end;
                 end;
             end;
-            local v625 = aclGet("Tactics") or aclCreate("Tactics");
-            local v626 = aclGetGroup("Tactics") or aclCreateGroup("Tactics");
-            aclSetRight(v625, "function.callRemote", true);
-            aclSetRight(v625, "function.getClientIP", true);
-            aclSetRight(v625, "function.kickPlayer", true);
-            aclSetRight(v625, "function.redirectPlayer", true);
-            aclSetRight(v625, "function.restartResource", true);
-            aclSetRight(v625, "function.startResource", true);
-            aclSetRight(v625, "function.stopResource", true);
-            aclSetRight(v625, "general.ModifyOtherObjects", true);
-            for v627 in pairs(v615) do
-                aclSetRight(v625, "general.tactics_" .. v627, true);
+            local tacticsACL = aclGet("Tactics") or aclCreate("Tactics");
+            local tacticsACLGroup = aclGetGroup("Tactics") or aclCreateGroup("Tactics");
+            aclSetRight(tacticsACL, "function.callRemote", true);
+            aclSetRight(tacticsACL, "function.getClientIP", true);
+            aclSetRight(tacticsACL, "function.kickPlayer", true);
+            aclSetRight(tacticsACL, "function.redirectPlayer", true);
+            aclSetRight(tacticsACL, "function.restartResource", true);
+            aclSetRight(tacticsACL, "function.startResource", true);
+            aclSetRight(tacticsACL, "function.stopResource", true);
+            aclSetRight(tacticsACL, "general.ModifyOtherObjects", true);
+            for permissionName in pairs(adminPermissionsFull) do
+                aclSetRight(tacticsACL, "general.tactics_" .. permissionName, true);
             end;
-            aclGroupAddACL(v626, v625);
-            aclGroupAddObject(v626, "resource." .. getResourceName(v614));
-            for _, v629 in ipairs(aclGroupList()) do
-                if v629 ~= v626 then
-                    aclGroupRemoveObject(v629, "resource." .. getResourceName(v614));
-                    if not hasObjectPermissionTo(v614, "function.aclGroupRemoveObject", false) then
+            aclGroupAddACL(tacticsACLGroup, tacticsACL);
+            aclGroupAddObject(tacticsACLGroup, "resource." .. getResourceName(resourceElement));
+            for _, aclGroupEntry in ipairs(aclGroupList()) do
+                if aclGroupEntry ~= tacticsACLGroup then
+                    aclGroupRemoveObject(aclGroupEntry, "resource." .. getResourceName(resourceElement));
+                    if not hasObjectPermissionTo(resourceElement, "function.aclGroupRemoveObject", false) then
                         break;
                     end;
                 end;
@@ -2585,46 +2573,45 @@ end)();
             return;
         end;
     end;
-    getConfigs = function() --[[ Line: 152 ]]
-        local v630 = {};
-        local v631 = xmlLoadFile("config/configs.xml");
-        if not v631 then
-            return v630;
+    getConfigs = function() 
+        local configsList = {};
+        local configsXML = xmlLoadFile("config/configs.xml");
+        if not configsXML then
+            return configsList;
         else
-            for _, v633 in ipairs(xmlNodeGetChildren(v631)) do
-                if xmlNodeGetName(v633) == "config" then
-                    table.insert(v630, xmlNodeGetAttribute(v633, "src"));
+            for _, configNode in ipairs(xmlNodeGetChildren(configsXML)) do
+                if xmlNodeGetName(configNode) == "config" then
+                    table.insert(configsList, xmlNodeGetAttribute(configNode, "src"));
                 end;
             end;
-            xmlUnloadFile(v631);
-            return v630;
+            xmlUnloadFile(configsXML);
+            return configsList;
         end;
     end;
-    getCurrentConfig = function() --[[ Line: 164 ]]
-        local v634 = false;
+    getCurrentConfig = function() 
+        local currentConfig = false;
         if not fileExists("config/configs.xml") then
-            return v634;
+            return currentConfig;
         else
-            local v635 = xmlLoadFile("config/configs.xml");
-            for _, v637 in ipairs(xmlNodeGetChildren(v635)) do
-                if xmlNodeGetName(v637) == "current" then
-                    v634 = xmlNodeGetAttribute(v637, "src");
+            local configsFileXML = xmlLoadFile("config/configs.xml");
+            for _, configFileNode in ipairs(xmlNodeGetChildren(configsFileXML)) do
+                if xmlNodeGetName(configFileNode) == "current" then
+                    currentConfig = xmlNodeGetAttribute(configFileNode, "src");
                 end;
             end;
-            xmlUnloadFile(v635);
-            return v634;
+            xmlUnloadFile(configsFileXML);
+            return currentConfig;
         end;
     end;
-    startConfig = function(v638, v639) --[[ Line: 176 ]]
-        -- upvalues: v578 (ref), v579 (ref)
-        if not fileExists("config/" .. tostring(v638) .. ".xml") then
+    startConfig = function(configName, silentLoad) 
+        if not fileExists("config/" .. tostring(configName) .. ".xml") then
             return false;
         else
-            local v640 = xmlLoadFile("config/" .. tostring(v638) .. ".xml");
-            for _, v642 in ipairs(xmlNodeGetChildren(v640)) do
-                if xmlNodeGetName(v642) == "teams" then
-                    local v643 = {};
-                    local v644 = {
+            local configXML = xmlLoadFile("config/" .. tostring(configName) .. ".xml");
+            for _, configSection in ipairs(xmlNodeGetChildren(configXML)) do
+                if xmlNodeGetName(configSection) == "teams" then
+                    local teamsArray = {};
+                    local refereeTeam = {
                         "Referee", 
                         {
                             71
@@ -2635,9 +2622,9 @@ end)();
                             255
                         }
                     };
-                    for _, v646 in ipairs(xmlNodeGetChildren(v642)) do
-                        if xmlNodeGetName(v646) == "team" then
-                            local v647 = {
+                    for _, teamNode in ipairs(xmlNodeGetChildren(configSection)) do
+                        if xmlNodeGetName(teamNode) == "team" then
+                            local teamData = {
                                 "", 
                                 {
                                     71
@@ -2648,280 +2635,280 @@ end)();
                                     255
                                 }
                             };
-                            for v648, v649 in pairs(xmlNodeGetAttributes(v646)) do
-                                if v648 == "name" then
-                                    v647[1] = v649;
+                            for attributeName, attributeValue in pairs(xmlNodeGetAttributes(teamNode)) do
+                                if attributeName == "name" then
+                                    teamData[1] = attributeValue;
                                 end;
-                                if v648 == "skins" then
-                                    v647[2] = {
-                                        fromJSON(v649)
+                                if attributeName == "skins" then
+                                    teamData[2] = {
+                                        fromJSON(attributeValue)
                                     };
                                 end;
-                                if v648 == "color" then
-                                    v647[3] = {
-                                        fromJSON(v649)
+                                if attributeName == "color" then
+                                    teamData[3] = {
+                                        fromJSON(attributeValue)
                                     };
                                 end;
-                                if v648 == "side" then
-                                    v647[4] = v649;
+                                if attributeName == "side" then
+                                    teamData[4] = attributeValue;
                                 end;
                             end;
-                            table.insert(v643, v647);
+                            table.insert(teamsArray, teamData);
                         end;
-                        if xmlNodeGetName(v646) == "referee" then
-                            for v650, v651 in pairs(xmlNodeGetAttributes(v646)) do
-                                if v650 == "name" then
-                                    v644[1] = v651;
+                        if xmlNodeGetName(teamNode) == "referee" then
+                            for refAttributeName, refAttributeValue in pairs(xmlNodeGetAttributes(teamNode)) do
+                                if refAttributeName == "name" then
+                                    refereeTeam[1] = refAttributeValue;
                                 end;
-                                if v650 == "skins" then
-                                    v644[2] = {
-                                        fromJSON(v651)
+                                if refAttributeName == "skins" then
+                                    refereeTeam[2] = {
+                                        fromJSON(refAttributeValue)
                                     };
                                 end;
-                                if v650 == "color" then
-                                    v644[3] = {
-                                        fromJSON(v651)
+                                if refAttributeName == "color" then
+                                    refereeTeam[3] = {
+                                        fromJSON(refAttributeValue)
                                     };
                                 end;
                             end;
                         end;
                     end;
-                    table.insert(v643, 1, v644);
-                    local v652 = getElementsByType("team");
-                    if #v652 > #v643 then
-                        for v653, v654 in ipairs(v652) do
-                            if v653 <= #v643 then
-                                local v655 = v643[v653][1];
-                                local v656 = v643[v653][3];
-                                if v653 > 1 then
-                                    local v657 = v643[v653][4];
-                                    local v658 = v643[v653][2];
-                                    setElementData(v654, "Side", tonumber(v657));
-                                    setElementData(v654, "Skins", v658);
+                    table.insert(teamsArray, 1, refereeTeam);
+                    local existingTeams = getElementsByType("team");
+                    if #existingTeams > #teamsArray then
+                        for teamCounter, teamElement2 in ipairs(existingTeams) do
+                            if teamCounter <= #teamsArray then
+                                local newTeamName = teamsArray[teamCounter][1];
+                                local newTeamColor = teamsArray[teamCounter][3];
+                                if teamCounter > 1 then
+                                    local teamSide = teamsArray[teamCounter][4];
+                                    local teamSkinsData = teamsArray[teamCounter][2];
+                                    setElementData(teamElement2, "Side", tonumber(teamSide));
+                                    setElementData(teamElement2, "Skins", teamSkinsData);
                                 end;
-                                setTeamName(v654, v655);
-                                setTeamColor(v654, v656[1], v656[2], v656[3]);
+                                setTeamName(teamElement2, newTeamName);
+                                setTeamColor(teamElement2, newTeamColor[1], newTeamColor[2], newTeamColor[3]);
                             else
-                                removeServerTeam(v654);
+                                removeServerTeam(teamElement2);
                             end;
                         end;
                     else
-                        local v659 = getTacticsData("settings", "vehicle_color");
-                        for v660, v661 in ipairs(v643) do
-                            if v660 <= #v652 then
-                                local v662 = v661[1];
-                                local v663 = v661[3];
-                                if v660 > 1 then
-                                    local v664 = v661[4];
-                                    local v665 = v661[2];
-                                    setElementData(v652[v660], "Side", tonumber(v664));
-                                    setElementData(v652[v660], "Skins", v665);
+                        local vehicleColorSetting = getTacticsData("settings", "vehicle_color");
+                        for newTeamIndex, newTeamConfig in ipairs(teamsArray) do
+                            if newTeamIndex <= #existingTeams then
+                                local teamNameToSet = newTeamConfig[1];
+                                local teamColorToSet = newTeamConfig[3];
+                                if newTeamIndex > 1 then
+                                    local sideToSet = newTeamConfig[4];
+                                    local skinsToSet = newTeamConfig[2];
+                                    setElementData(existingTeams[newTeamIndex], "Side", tonumber(sideToSet));
+                                    setElementData(existingTeams[newTeamIndex], "Skins", skinsToSet);
                                 end;
-                                setTeamName(v652[v660], v662);
-                                setTeamColor(v652[v660], v663[1], v663[2], v663[3]);
-                                for _, v667 in ipairs(getPlayersInTeam(v652[v660])) do
-                                    triggerClientEvent(root, "onClientPlayerBlipUpdate", v667);
-                                    if getPedOccupiedVehicleSeat(v667) == 0 and v659 == "teamcolor" then
-                                        setVehicleColor(getPedOccupiedVehicle(v667), v663[1], v663[2], v663[3], 0, 0, 0);
+                                setTeamName(existingTeams[newTeamIndex], teamNameToSet);
+                                setTeamColor(existingTeams[newTeamIndex], teamColorToSet[1], teamColorToSet[2], teamColorToSet[3]);
+                                for _, playerInTeam in ipairs(getPlayersInTeam(existingTeams[newTeamIndex])) do
+                                    triggerClientEvent(root, "onClientPlayerBlipUpdate", playerInTeam);
+                                    if getPedOccupiedVehicleSeat(playerInTeam) == 0 and vehicleColorSetting == "teamcolor" then
+                                        setVehicleColor(getPedOccupiedVehicle(playerInTeam), teamColorToSet[1], teamColorToSet[2], teamColorToSet[3], 0, 0, 0);
                                     end;
                                 end;
                             else
-                                local v668, v669, v670 = unpack(v661);
-                                addServerTeam(v668, v669, v670);
+                                local teamNameParam, teamSkinsParam, teamColorParam = unpack(newTeamConfig);
+                                addServerTeam(teamNameParam, teamSkinsParam, teamColorParam);
                             end;
                         end;
                     end;
-                elseif xmlNodeGetName(v642) == "weaponpack" then
-                    local v671 = xmlNodeGetAttribute(v642, "slots");
-                    setTacticsData(tonumber(v671) or 0, "weapon_slots");
-                    for _, v673 in ipairs(xmlNodeGetChildren(v642)) do
-                        if xmlNodeGetName(v673) == "weapons" then
-                            setTacticsData(xmlNodeGetAttributes(v673) or {}, "weaponspack");
-                        elseif xmlNodeGetName(v673) == "balance" then
-                            setTacticsData(xmlNodeGetAttributes(v673) or {}, "weapon_balance");
-                        elseif xmlNodeGetName(v673) == "cost" then
-                            setTacticsData(xmlNodeGetAttributes(v673) or {}, "weapon_cost");
-                        elseif xmlNodeGetName(v673) == "slot" then
-                            setTacticsData(xmlNodeGetAttributes(v673) or {}, "weapon_slot");
+                elseif xmlNodeGetName(configSection) == "weaponpack" then
+                    local weaponSlots = xmlNodeGetAttribute(configSection, "slots");
+                    setTacticsData(tonumber(weaponSlots) or 0, "weapon_slots");
+                    for _, weaponNode in ipairs(xmlNodeGetChildren(configSection)) do
+                        if xmlNodeGetName(weaponNode) == "weapons" then
+                            setTacticsData(xmlNodeGetAttributes(weaponNode) or {}, "weaponspack");
+                        elseif xmlNodeGetName(weaponNode) == "balance" then
+                            setTacticsData(xmlNodeGetAttributes(weaponNode) or {}, "weapon_balance");
+                        elseif xmlNodeGetName(weaponNode) == "cost" then
+                            setTacticsData(xmlNodeGetAttributes(weaponNode) or {}, "weapon_cost");
+                        elseif xmlNodeGetName(weaponNode) == "slot" then
+                            setTacticsData(xmlNodeGetAttributes(weaponNode) or {}, "weapon_slot");
                         end;
                     end;
-                elseif xmlNodeGetName(v642) == "shooting" then
-                    local v674 = {};
-                    for _, v676 in ipairs(xmlNodeGetChildren(v642)) do
-                        if xmlNodeGetName(v676) == "properties" then
-                            local v677 = xmlNodeGetAttribute(v676, "weapon");
-                            if v677 then
-                                v674[tonumber(v677)] = xmlNodeGetAttributes(v676) or {};
+                elseif xmlNodeGetName(configSection) == "shooting" then
+                    local weaponPropertiesData = {};
+                    for _, propertyNode in ipairs(xmlNodeGetChildren(configSection)) do
+                        if xmlNodeGetName(propertyNode) == "properties" then
+                            local weaponIDAttr = xmlNodeGetAttribute(propertyNode, "weapon");
+                            if weaponIDAttr then
+                                weaponPropertiesData[tonumber(weaponIDAttr)] = xmlNodeGetAttributes(propertyNode) or {};
                             end;
                         end;
                     end;
-                    for _, v679 in ipairs(v578) do
-                        for _, v681 in ipairs(v579) do
-                            local v682 = getOriginalWeaponProperty(v679, "pro", v681);
-                            if v674[v679] and v674[v679][v681] then
-                                v682 = tonumber(v674[v679][v681]) or v674[v679][v681];
-                                if v681 == "damage" then
-                                    v682 = v682 * 3;
+                    for _, weaponIDLoop in ipairs(weaponIDs) do
+                        for _, propertyName in ipairs(weaponProperties) do
+                            local propertyValue = getOriginalWeaponProperty(weaponIDLoop, "pro", propertyName);
+                            if weaponPropertiesData[weaponIDLoop] and weaponPropertiesData[weaponIDLoop][propertyName] then
+                                propertyValue = tonumber(weaponPropertiesData[weaponIDLoop][propertyName]) or weaponPropertiesData[weaponIDLoop][propertyName];
+                                if propertyName == "damage" then
+                                    propertyValue = propertyValue * 3;
                                 end;
-                            elseif v681 == "flags" then
-                                v682 = string.reverse(string.format("%04X", v682));
+                            elseif propertyName == "flags" then
+                                propertyValue = string.reverse(string.format("%04X", propertyValue));
                             end;
-                            if v681 == "flags" then
-                                local l_v682_0 = v682;
-                                local v684 = string.reverse(string.format("%04X", getWeaponProperty(v679, "pro", "flags")));
-                                local v685 = {
+                            if propertyName == "flags" then
+                                local propertyValueStr = propertyValue;
+                                local currentFlags = string.reverse(string.format("%04X", getWeaponProperty(weaponIDLoop, "pro", "flags")));
+                                local flagBits = {
                                     {}, 
                                     {}, 
                                     {}, 
                                     {}, 
                                     {}
                                 };
-                                for v686 = 1, 4 do
-                                    local v687 = tonumber(string.sub(l_v682_0, v686, v686), 16);
-                                    if v687 then
-                                        for v688 = 3, 0, -1 do
-                                            local v689 = 2 ^ v688;
-                                            if v689 <= v687 then
-                                                v685[v686][v689] = true;
-                                                v687 = v687 - v689;
+                                for flagGroup = 1, 4 do
+                                    local hexValue = tonumber(string.sub(propertyValueStr, flagGroup, flagGroup), 16);
+                                    if hexValue then
+                                        for bitPosition = 3, 0, -1 do
+                                            local bitValue = 2 ^ bitPosition;
+                                            if bitValue <= hexValue then
+                                                flagBits[flagGroup][bitValue] = true;
+                                                hexValue = hexValue - bitValue;
                                             else
-                                                v685[v686][v689] = false;
+                                                flagBits[flagGroup][bitValue] = false;
                                             end;
                                         end;
                                     else
-                                        v685[v686][1] = false;
-                                        v685[v686][2] = false;
-                                        v685[v686][4] = false;
-                                        v685[v686][8] = false;
+                                        flagBits[flagGroup][1] = false;
+                                        flagBits[flagGroup][2] = false;
+                                        flagBits[flagGroup][4] = false;
+                                        flagBits[flagGroup][8] = false;
                                     end;
                                 end;
-                                for v690 = 1, 4 do
-                                    local v691 = tonumber(string.sub(v684, v690, v690), 16);
-                                    if v691 then
-                                        for v692 = 3, 0, -1 do
-                                            local v693 = 2 ^ v692;
-                                            if v693 <= v691 then
-                                                if not v685[v690][v693] then
-                                                    setWeaponProperty(v679, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v690) .. tostring(v693) .. string.rep("0", v690 - 1)));
+                                for flagGroupIndex = 1, 4 do
+                                    local currentHex = tonumber(string.sub(currentFlags, flagGroupIndex, flagGroupIndex), 16);
+                                    if currentHex then
+                                        for bitPos = 3, 0, -1 do
+                                            local bitMask = 2 ^ bitPos;
+                                            if bitMask <= currentHex then
+                                                if not flagBits[flagGroupIndex][bitMask] then
+                                                    setWeaponProperty(weaponIDLoop, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex) .. tostring(bitMask) .. string.rep("0", flagGroupIndex - 1)));
                                                 end;
-                                                v691 = v691 - v693;
-                                            elseif v685[v690][v693] then
-                                                setWeaponProperty(v679, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v690) .. tostring(v693) .. string.rep("0", v690 - 1)));
+                                                currentHex = currentHex - bitMask;
+                                            elseif flagBits[flagGroupIndex][bitMask] then
+                                                setWeaponProperty(weaponIDLoop, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex) .. tostring(bitMask) .. string.rep("0", flagGroupIndex - 1)));
                                             end;
                                         end;
                                     else
-                                        if v685[v690][8] then
-                                            setWeaponProperty(v679, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v690) .. "8" .. string.rep("0", v690 - 1)));
+                                        if flagBits[flagGroupIndex][8] then
+                                            setWeaponProperty(weaponIDLoop, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex) .. "8" .. string.rep("0", flagGroupIndex - 1)));
                                         end;
-                                        if v685[v690][4] then
-                                            setWeaponProperty(v679, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v690) .. "4" .. string.rep("0", v690 - 1)));
+                                        if flagBits[flagGroupIndex][4] then
+                                            setWeaponProperty(weaponIDLoop, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex) .. "4" .. string.rep("0", flagGroupIndex - 1)));
                                         end;
-                                        if v685[v690][2] then
-                                            setWeaponProperty(v679, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v690) .. "2" .. string.rep("0", v690 - 1)));
+                                        if flagBits[flagGroupIndex][2] then
+                                            setWeaponProperty(weaponIDLoop, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex) .. "2" .. string.rep("0", flagGroupIndex - 1)));
                                         end;
-                                        if v685[v690][1] then
-                                            setWeaponProperty(v679, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v690) .. "1" .. string.rep("0", v690 - 1)));
+                                        if flagBits[flagGroupIndex][1] then
+                                            setWeaponProperty(weaponIDLoop, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex) .. "1" .. string.rep("0", flagGroupIndex - 1)));
                                         end;
                                     end;
                                 end;
-                            elseif v681 ~= "weapon" then
-                                setWeaponProperty(v679, "pro", v681, v682);
+                            elseif propertyName ~= "weapon" then
+                                setWeaponProperty(weaponIDLoop, "pro", propertyName, propertyValue);
                             end;
                         end;
                     end;
-                elseif xmlNodeGetName(v642) == "settings" then
-                    for _, v695 in ipairs(xmlNodeGetChildren(v642)) do
-                        if xmlNodeGetName(v695) == "mode" then
-                            local v696 = xmlNodeGetAttributes(v695);
-                            for v697, v698 in pairs(v696) do
-                                if v697 ~= "name" and (v638 == "_default" or getTacticsData("modes", v696.name, v697) ~= nil and getDataType(v698) == getDataType(getTacticsData("modes", v696.name, v697, false))) then
-                                    setTacticsData(v698, "modes", v696.name, v697);
+                elseif xmlNodeGetName(configSection) == "settings" then
+                    for _, settingNode in ipairs(xmlNodeGetChildren(configSection)) do
+                        if xmlNodeGetName(settingNode) == "mode" then
+                            local modeAttributes = xmlNodeGetAttributes(settingNode);
+                            for modeAttributeKey, modeAttributeValue in pairs(modeAttributes) do
+                                if modeAttributeKey ~= "name" and (configName == "_default" or getTacticsData("modes", modeAttributes.name, modeAttributeKey) ~= nil and getDataType(modeAttributeValue) == getDataType(getTacticsData("modes", modeAttributes.name, modeAttributeKey, false))) then
+                                    setTacticsData(modeAttributeValue, "modes", modeAttributes.name, modeAttributeKey);
                                 end;
                             end;
                         end;
-                        if xmlNodeGetName(v695) == "settings" then
-                            for v699, v700 in pairs(xmlNodeGetAttributes(v695)) do
-                                if v638 == "_default" or getTacticsData("settings", v699) ~= nil and getDataType(v700) == getDataType(getTacticsData("settings", v699, false)) then
-                                    setTacticsData(v700, "settings", v699);
+                        if xmlNodeGetName(settingNode) == "settings" then
+                            for settingKey, settingValue in pairs(xmlNodeGetAttributes(settingNode)) do
+                                if configName == "_default" or getTacticsData("settings", settingKey) ~= nil and getDataType(settingValue) == getDataType(getTacticsData("settings", settingKey, false)) then
+                                    setTacticsData(settingValue, "settings", settingKey);
                                 end;
                             end;
                         end;
-                        if xmlNodeGetName(v695) == "glitches" then
-                            for v701, v702 in pairs(xmlNodeGetAttributes(v695)) do
-                                if v638 == "_default" or getTacticsData("glitches", v701) ~= nil and getDataType(v702) == getDataType(getTacticsData("glitches", v701, false)) then
-                                    setTacticsData(v702, "glitches", v701);
+                        if xmlNodeGetName(settingNode) == "glitches" then
+                            for glitchKey, glitchValue in pairs(xmlNodeGetAttributes(settingNode)) do
+                                if configName == "_default" or getTacticsData("glitches", glitchKey) ~= nil and getDataType(glitchValue) == getDataType(getTacticsData("glitches", glitchKey, false)) then
+                                    setTacticsData(glitchValue, "glitches", glitchKey);
                                 end;
                             end;
                         end;
-                        if xmlNodeGetName(v695) == "cheats" then
-                            for v703, v704 in pairs(xmlNodeGetAttributes(v695)) do
-                                if v638 == "_default" or getTacticsData("cheats", v703) ~= nil and getDataType(v704) == getDataType(getTacticsData("cheats", v703, false)) then
-                                    setTacticsData(v704, "cheats", v703);
+                        if xmlNodeGetName(settingNode) == "cheats" then
+                            for cheatKey, cheatValue in pairs(xmlNodeGetAttributes(settingNode)) do
+                                if configName == "_default" or getTacticsData("cheats", cheatKey) ~= nil and getDataType(cheatValue) == getDataType(getTacticsData("cheats", cheatKey, false)) then
+                                    setTacticsData(cheatValue, "cheats", cheatKey);
                                 end;
                             end;
                         end;
-                        if xmlNodeGetName(v695) == "limites" then
-                            for v705, v706 in pairs(xmlNodeGetAttributes(v695)) do
-                                if v638 == "_default" or getTacticsData("limites", v705) ~= nil and getDataType(v706) == getDataType(getTacticsData("limites", v705, false)) then
-                                    setTacticsData(v706, "limites", v705);
+                        if xmlNodeGetName(settingNode) == "limites" then
+                            for limitKey, limitValue in pairs(xmlNodeGetAttributes(settingNode)) do
+                                if configName == "_default" or getTacticsData("limites", limitKey) ~= nil and getDataType(limitValue) == getDataType(getTacticsData("limites", limitKey, false)) then
+                                    setTacticsData(limitValue, "limites", limitKey);
                                 end;
                             end;
                         end;
                     end;
-                elseif xmlNodeGetName(v642) == "mappack" then
-                    local v707 = xmlNodeGetAttribute(v642, "automatics");
-                    if v707 then
-                        setTacticsData(v707, "automatics");
+                elseif xmlNodeGetName(configSection) == "mappack" then
+                    local automaticsMode = xmlNodeGetAttribute(configSection, "automatics");
+                    if automaticsMode then
+                        setTacticsData(automaticsMode, "automatics");
                     end;
-                    for _, v709 in ipairs(xmlNodeGetChildren(v642)) do
-                        if xmlNodeGetName(v709) == "cycler" then
-                            local v710 = xmlNodeGetAttribute(v709, "resnames");
-                            local v711 = {
-                                fromJSON(v710)
+                    for _, mapPackNode in ipairs(xmlNodeGetChildren(configSection)) do
+                        if xmlNodeGetName(mapPackNode) == "cycler" then
+                            local cyclerResources = xmlNodeGetAttribute(mapPackNode, "resnames");
+                            local resourcesArray = {
+                                fromJSON(cyclerResources)
                             };
-                            local v712 = {};
-                            for _, v714 in ipairs(v711) do
-                                local v715 = getResourceFromName(tostring(v714));
-                                if v715 and getResourceInfo(v715, "type") == "map" then
-                                    for v716, v717 in pairs(getTacticsData("modes_defined")) do
-                                        if string.find(v714, v716) == 1 then
-                                            local v718 = {};
-                                            if type(v717) == "function" then
-                                                local v719 = xmlLoadFile(":" .. v714 .. "/meta.xml");
-                                                if v719 then
-                                                    for _, v721 in ipairs(xmlNodeGetChildren(v719)) do
-                                                        if xmlNodeGetName(v721) == "map" then
-                                                            local v722 = xmlLoadFile(":" .. v714 .. "/" .. xmlNodeGetAttribute(v721, "src"));
-                                                            if v722 then
-                                                                for _, v724 in ipairs(xmlNodeGetChildren(v722)) do
-                                                                    local v725 = xmlNodeGetName(v724);
-                                                                    if not v718[v725] then
-                                                                        v718[v725] = {};
+                            local filteredMaps = {};
+                            for _, mapResourceName in ipairs(resourcesArray) do
+                                local mapResourceElement = getResourceFromName(tostring(mapResourceName));
+                                if mapResourceElement and getResourceInfo(mapResourceElement, "type") == "map" then
+                                    for modePatternKey, modePatternValue in pairs(getTacticsData("modes_defined")) do
+                                        if string.find(mapResourceName, modePatternKey) == 1 then
+                                            local mapElementsData = {};
+                                            if type(modePatternValue) == "function" then
+                                                local mapMetaXML = xmlLoadFile(":" .. mapResourceName .. "/meta.xml");
+                                                if mapMetaXML then
+                                                    for _, mapMetaNode in ipairs(xmlNodeGetChildren(mapMetaXML)) do
+                                                        if xmlNodeGetName(mapMetaNode) == "map" then
+                                                            local mapDataXML = xmlLoadFile(":" .. mapResourceName .. "/" .. xmlNodeGetAttribute(mapMetaNode, "src"));
+                                                            if mapDataXML then
+                                                                for _, mapDataNode in ipairs(xmlNodeGetChildren(mapDataXML)) do
+                                                                    local mapElementType = xmlNodeGetName(mapDataNode);
+                                                                    if not mapElementsData[mapElementType] then
+                                                                        mapElementsData[mapElementType] = {};
                                                                     end;
-                                                                    table.insert(v718[v725], xmlNodeGetAttributes(v724));
+                                                                    table.insert(mapElementsData[mapElementType], xmlNodeGetAttributes(mapDataNode));
                                                                 end;
-                                                                xmlUnloadFile(v722);
+                                                                xmlUnloadFile(mapDataXML);
                                                             end;
                                                         end;
                                                     end;
-                                                    xmlUnloadFile(v719);
+                                                    xmlUnloadFile(mapMetaXML);
                                                 end;
                                             end;
-                                            if type(v717) ~= "function" or v717(v718) == true then
-                                                local v726 = getResourceInfo(v715, "name");
-                                                if not v726 then
-                                                    v726 = string.sub(string.gsub(v714, "_", " "), #v716 + 2);
-                                                    if #v726 > 1 then
-                                                        v726 = string.upper(string.sub(v726, 1, 1)) .. string.sub(v726, 2);
+                                            if type(modePatternValue) ~= "function" or modePatternValue(mapElementsData) == true then
+                                                local resourceDisplayName = getResourceInfo(mapResourceElement, "name");
+                                                if not resourceDisplayName then
+                                                    resourceDisplayName = string.sub(string.gsub(mapResourceName, "_", " "), #modePatternKey + 2);
+                                                    if #resourceDisplayName > 1 then
+                                                        resourceDisplayName = string.upper(string.sub(resourceDisplayName, 1, 1)) .. string.sub(resourceDisplayName, 2);
                                                     end;
                                                 end;
-                                                local v727 = string.upper(string.sub(v716, 1, 1)) .. string.sub(v716, 2);
-                                                local v728 = getResourceInfo(v715, "author") or "";
-                                                table.insert(v712, {
-                                                    v714, 
-                                                    v727, 
-                                                    v726, 
-                                                    v728
+                                                local modeDisplayName = string.upper(string.sub(modePatternKey, 1, 1)) .. string.sub(modePatternKey, 2);
+                                                local resourceAuthor = getResourceInfo(mapResourceElement, "author") or "";
+                                                table.insert(filteredMaps, {
+                                                    mapResourceName, 
+                                                    modeDisplayName, 
+                                                    resourceDisplayName, 
+                                                    resourceAuthor
                                                 });
                                                 break;
                                             else
@@ -2930,11 +2917,11 @@ end)();
                                         end;
                                     end;
                                 else
-                                    for v729, _ in pairs(getTacticsData("modes_defined")) do
-                                        if v714 == v729 then
-                                            table.insert(v712, {
-                                                v714, 
-                                                string.upper(string.sub(v714, 1, 1)) .. string.sub(v714, 2), 
+                                    for modeKeyCheck2, _ in pairs(getTacticsData("modes_defined")) do
+                                        if mapResourceName == modeKeyCheck2 then
+                                            table.insert(filteredMaps, {
+                                                mapResourceName, 
+                                                string.upper(string.sub(mapResourceName, 1, 1)) .. string.sub(mapResourceName, 2), 
                                                 "Random"
                                             });
                                             break;
@@ -2942,439 +2929,438 @@ end)();
                                     end;
                                 end;
                             end;
-                            setTacticsData(v712, "Resources");
+                            setTacticsData(filteredMaps, "Resources");
                         end;
-                        if xmlNodeGetName(v709) == "disabled" then
-                            local v731 = xmlNodeGetAttribute(v709, "resnames");
-                            local v732 = {};
-                            for _, v734 in ipairs({
-                                fromJSON(v731)
+                        if xmlNodeGetName(mapPackNode) == "disabled" then
+                            local disabledResources = xmlNodeGetAttribute(mapPackNode, "resnames");
+                            local disabledMapTable = {};
+                            for _, disabledMapName in ipairs({
+                                fromJSON(disabledResources)
                             }) do
-                                v732[v734] = true;
+                                disabledMapTable[disabledMapName] = true;
                             end;
-                            setTacticsData(v732, "map_disabled");
+                            setTacticsData(disabledMapTable, "map_disabled");
                         end;
                     end;
-                elseif xmlNodeGetName(v642) == "vehiclepack" then
-                    local v735 = xmlNodeGetAttribute(v642, "models");
-                    local v736 = {};
-                    for _, v738 in ipairs({
-                        fromJSON(v735)
+                elseif xmlNodeGetName(configSection) == "vehiclepack" then
+                    local vehicleModels = xmlNodeGetAttribute(configSection, "models");
+                    local disabledVehicles = {};
+                    for _, vehicleModelID in ipairs({
+                        fromJSON(vehicleModels)
                     }) do
-                        v736[v738] = true;
+                        disabledVehicles[vehicleModelID] = true;
                     end;
-                    setTacticsData(v736, "disabled_vehicles");
-                elseif xmlNodeGetName(v642) == "handlings" then
-                    local v739 = {};
-                    for _, v741 in ipairs(xmlNodeGetChildren(v642)) do
-                        if xmlNodeGetName(v741) == "handling" then
-                            local v742 = tonumber(xmlNodeGetAttribute(v741, "model"));
-                            if v742 then
-                                v739[v742] = {};
-                                local l_pairs_2 = pairs;
-                                local v744 = xmlNodeGetAttributes(v741) or {};
-                                for v745, v746 in l_pairs_2(v744) do
-                                    if v745 == "centerOfMass" then
-                                        v739[v742][v745] = {
-                                            fromJSON(v746)
+                    setTacticsData(disabledVehicles, "disabled_vehicles");
+                elseif xmlNodeGetName(configSection) == "handlings" then
+                    local handlingData = {};
+                    for _, handlingNode in ipairs(xmlNodeGetChildren(configSection)) do
+                        if xmlNodeGetName(handlingNode) == "handling" then
+                            local vehicleModel = tonumber(xmlNodeGetAttribute(handlingNode, "model"));
+                            if vehicleModel then
+                                handlingData[vehicleModel] = {};
+                                local pairsFunc2 = pairs;
+                                local handlingAttributes = xmlNodeGetAttributes(handlingNode) or {};
+                                for handlingKeyName, handlingKeyValue in pairsFunc2(handlingAttributes) do
+                                    if handlingKeyName == "centerOfMass" then
+                                        handlingData[vehicleModel][handlingKeyName] = {
+                                            fromJSON(handlingKeyValue)
                                         };
-                                    elseif v745 == "modelFlags" or v745 == "handlingFlags" then
-                                        v739[v742][v745] = "0x" .. string.reverse(v746);
-                                    elseif v745 == "sirens" then
-                                        local v747 = {
-                                            fromJSON(xmlNodeGetAttribute(v741, "sirens"))
+                                    elseif handlingKeyName == "modelFlags" or handlingKeyName == "handlingFlags" then
+                                        handlingData[vehicleModel][handlingKeyName] = "0x" .. string.reverse(handlingKeyValue);
+                                    elseif handlingKeyName == "sirens" then
+                                        local sirenDataArray = {
+                                            fromJSON(xmlNodeGetAttribute(handlingNode, "sirens"))
                                         };
-                                        v739[v742][v745] = {
-                                            count = tonumber(v747[1]), 
-                                            type = tonumber(v747[2]), 
+                                        handlingData[vehicleModel][handlingKeyName] = {
+                                            count = tonumber(sirenDataArray[1]), 
+                                            type = tonumber(sirenDataArray[2]), 
                                             flags = {
-                                                ["360"] = v747[3] == 1, 
-                                                DoLOSCheck = v747[4] == 1, 
-                                                UseRandomiser = v747[5] == 1, 
-                                                Silent = v747[6] == 1
+                                                ["360"] = sirenDataArray[3] == 1, 
+                                                DoLOSCheck = sirenDataArray[4] == 1, 
+                                                UseRandomiser = sirenDataArray[5] == 1, 
+                                                Silent = sirenDataArray[6] == 1
                                             }
                                         };
-                                        for v748 = 1, tonumber(v747[1]) do
-                                            v739[v742][v745][v748] = {
-                                                x = tonumber(v747[2 + v748 * 5]), 
-                                                y = tonumber(v747[3 + v748 * 5]), 
-                                                z = tonumber(v747[4 + v748 * 5]), 
-                                                color = tostring(v747[5 + v748 * 5]), 
-                                                minalpha = tonumber(v747[6 + v748 * 5])
+                                        for sirenIndex2 = 1, tonumber(sirenDataArray[1]) do
+                                            handlingData[vehicleModel][handlingKeyName][sirenIndex2] = {
+                                                x = tonumber(sirenDataArray[2 + sirenIndex2 * 5]), 
+                                                y = tonumber(sirenDataArray[3 + sirenIndex2 * 5]), 
+                                                z = tonumber(sirenDataArray[4 + sirenIndex2 * 5]), 
+                                                color = tostring(sirenDataArray[5 + sirenIndex2 * 5]), 
+                                                minalpha = tonumber(sirenDataArray[6 + sirenIndex2 * 5])
                                             };
                                         end;
-                                    elseif tonumber(v746) then
-                                        v739[v742][v745] = tonumber(false);
-                                    elseif v746 == "true" then
-                                        v739[v742][v745] = true;
-                                    elseif v746 == "false" then
-                                        v739[v742][v745] = false;
+                                    elseif tonumber(handlingKeyValue) then
+                                        handlingData[vehicleModel][handlingKeyName] = tonumber(false);
+                                    elseif handlingKeyValue == "true" then
+                                        handlingData[vehicleModel][handlingKeyName] = true;
+                                    elseif handlingKeyValue == "false" then
+                                        handlingData[vehicleModel][handlingKeyName] = false;
                                     else
-                                        v739[v742][v745] = v746;
+                                        handlingData[vehicleModel][handlingKeyName] = handlingKeyValue;
                                     end;
                                 end;
                             end;
                         end;
                     end;
-                    setTacticsData(v739, "handlings");
-                elseif xmlNodeGetName(v642) == "weather" then
-                    local v749 = {};
-                    for _, v751 in ipairs(xmlNodeGetChildren(v642)) do
-                        if xmlNodeGetName(v751) == "weather" then
-                            local v752 = tonumber(xmlNodeGetAttribute(v751, "hour"));
-                            local v753, v754, v755, v756, v757, v758, v759 = fromJSON(xmlNodeGetAttribute(v751, "sun"));
-                            local v760, v761, v762, v763 = fromJSON(xmlNodeGetAttribute(v751, "water"));
-                            local v764 = xmlNodeGetAttribute(v751, "clouds") == "true";
-                            local v765 = xmlNodeGetAttribute(v751, "birds") == "true";
-                            v749[v752] = {
+                    setTacticsData(handlingData, "handlings");
+                elseif xmlNodeGetName(configSection) == "weather" then
+                    local weatherData = {};
+                    for _, weatherNode in ipairs(xmlNodeGetChildren(configSection)) do
+                        if xmlNodeGetName(weatherNode) == "weather" then
+                            local weatherHour = tonumber(xmlNodeGetAttribute(weatherNode, "hour"));
+                            local sunSizeX, sunSizeY, sunSizeZ, sunCoreR, sunCoreG, sunCoreB, sunCoronaSize = fromJSON(xmlNodeGetAttribute(weatherNode, "sun"));
+                            local waterR, waterG, waterB, waterA = fromJSON(xmlNodeGetAttribute(weatherNode, "water"));
+                            local hasClouds = xmlNodeGetAttribute(weatherNode, "clouds") == "true";
+                            local hasBirds = xmlNodeGetAttribute(weatherNode, "birds") == "true";
+                            weatherData[weatherHour] = {
                                 wind = {
-                                    fromJSON(xmlNodeGetAttribute(v751, "wind"))
+                                    fromJSON(xmlNodeGetAttribute(weatherNode, "wind"))
                                 }, 
-                                rain = tonumber(xmlNodeGetAttribute(v751, "rain")), 
-                                far = tonumber(xmlNodeGetAttribute(v751, "far")), 
-                                fog = tonumber(xmlNodeGetAttribute(v751, "fog")), 
+                                rain = tonumber(xmlNodeGetAttribute(weatherNode, "rain")), 
+                                far = tonumber(xmlNodeGetAttribute(weatherNode, "far")), 
+                                fog = tonumber(xmlNodeGetAttribute(weatherNode, "fog")), 
                                 sky = {
-                                    fromJSON(xmlNodeGetAttribute(v751, "sky"))
+                                    fromJSON(xmlNodeGetAttribute(weatherNode, "sky"))
                                 }, 
-                                clouds = v764, 
-                                birds = v765, 
+                                clouds = hasClouds, 
+                                birds = hasBirds, 
                                 sun = {
-                                    v753, 
-                                    v754, 
-                                    v755, 
-                                    v756, 
-                                    v757, 
-                                    v758
+                                    sunSizeX, 
+                                    sunSizeY, 
+                                    sunSizeZ, 
+                                    sunCoreR, 
+                                    sunCoreG, 
+                                    sunCoreB
                                 }, 
-                                sunsize = tonumber(v759), 
+                                sunsize = tonumber(sunCoronaSize), 
                                 water = {
-                                    v760, 
-                                    v761, 
-                                    v762, 
-                                    v763
+                                    waterR, 
+                                    waterG, 
+                                    waterB, 
+                                    waterA
                                 }, 
-                                wave = tonumber(xmlNodeGetAttribute(v751, "wave")), 
-                                level = tonumber(xmlNodeGetAttribute(v751, "level")), 
-                                heat = tonumber(xmlNodeGetAttribute(v751, "heat")), 
-                                effect = tonumber(xmlNodeGetAttribute(v751, "effect"))
+                                wave = tonumber(xmlNodeGetAttribute(weatherNode, "wave")), 
+                                level = tonumber(xmlNodeGetAttribute(weatherNode, "level")), 
+                                heat = tonumber(xmlNodeGetAttribute(weatherNode, "heat")), 
+                                effect = tonumber(xmlNodeGetAttribute(weatherNode, "effect"))
                             };
                         end;
                     end;
-                    setTacticsData(v749, "Weather");
-                elseif xmlNodeGetName(v642) == "anticheat" then
-                    setTacticsData(xmlNodeGetAttribute(v642, "action_detection"), "anticheat", "action_detection");
-                    for _, v767 in ipairs(xmlNodeGetChildren(v642)) do
-                        if xmlNodeGetName(v767) == "speedhach" then
-                            setTacticsData(xmlNodeGetAttribute(v767, "enable"), "anticheat", "speedhach");
-                        elseif xmlNodeGetName(v767) == "godmode" then
-                            setTacticsData(xmlNodeGetAttribute(v767, "enable"), "anticheat", "godmode");
-                        elseif xmlNodeGetName(v767) == "mods" then
-                            setTacticsData(xmlNodeGetAttribute(v767, "enable"), "anticheat", "mods");
-                            local v768 = {};
-                            for _, v770 in ipairs(xmlNodeGetChildren(v767)) do
-                                table.insert(v768, {
-                                    name = xmlNodeGetAttribute(v770, "name"), 
-                                    type = xmlNodeGetAttribute(v770, "type"), 
-                                    search = xmlNodeGetAttribute(v770, "search")
+                    setTacticsData(weatherData, "Weather");
+                elseif xmlNodeGetName(configSection) == "anticheat" then
+                    setTacticsData(xmlNodeGetAttribute(configSection, "action_detection"), "anticheat", "action_detection");
+                    for _, anticheatNode in ipairs(xmlNodeGetChildren(configSection)) do
+                        if xmlNodeGetName(anticheatNode) == "speedhach" then
+                            setTacticsData(xmlNodeGetAttribute(anticheatNode, "enable"), "anticheat", "speedhach");
+                        elseif xmlNodeGetName(anticheatNode) == "godmode" then
+                            setTacticsData(xmlNodeGetAttribute(anticheatNode, "enable"), "anticheat", "godmode");
+                        elseif xmlNodeGetName(anticheatNode) == "mods" then
+                            setTacticsData(xmlNodeGetAttribute(anticheatNode, "enable"), "anticheat", "mods");
+                            local modsList = {};
+                            for _, modNode in ipairs(xmlNodeGetChildren(anticheatNode)) do
+                                table.insert(modsList, {
+                                    name = xmlNodeGetAttribute(modNode, "name"), 
+                                    type = xmlNodeGetAttribute(modNode, "type"), 
+                                    search = xmlNodeGetAttribute(modNode, "search")
                                 });
                             end;
-                            setTacticsData(v768, "anticheat", "modslist");
+                            setTacticsData(modsList, "anticheat", "modslist");
                         end;
                     end;
                 end;
             end;
-            xmlUnloadFile(v640);
+            xmlUnloadFile(configXML);
             local _ = {};
-            v640 = xmlLoadFile("config/configs.xml");
-            for _, v773 in ipairs(xmlNodeGetChildren(v640)) do
-                if xmlNodeGetName(v773) == "current" then
-                    xmlNodeSetAttribute(v773, "src", v638);
+            configXML = xmlLoadFile("config/configs.xml");
+            for _, configFileNode2 in ipairs(xmlNodeGetChildren(configXML)) do
+                if xmlNodeGetName(configFileNode2) == "current" then
+                    xmlNodeSetAttribute(configFileNode2, "src", configName);
                 end;
             end;
-            xmlSaveFile(v640);
-            xmlUnloadFile(v640);
-            if not v639 then
+            xmlSaveFile(configXML);
+            xmlUnloadFile(configXML);
+            if not silentLoad then
                 refreshConfiglist(root);
                 callClientFunction(root, "refreshTeamConfig");
                 callClientFunction(root, "refreshWeaponProperties");
-                outputLangString(root, "config_loaded", v638);
+                outputLangString(root, "config_loaded", configName);
             end;
             return true;
         end;
     end;
-    saveConfig = function(v774, _, v776) --[[ Line: 554 ]]
-        -- upvalues: v578 (ref), v579 (ref)
-        local v777 = xmlCreateFile("config/" .. tostring(v774) .. ".xml", "config");
-        if not v777 then
+    saveConfig = function(configToSave, _, saveOptions) 
+        local saveXML = xmlCreateFile("config/" .. tostring(configToSave) .. ".xml", "config");
+        if not saveXML then
             return false;
         else
-            if fileExists("config/" .. tostring(v774) .. ".xml") then
-                fileDelete("config/" .. tostring(v774) .. ".xml");
+            if fileExists("config/" .. tostring(configToSave) .. ".xml") then
+                fileDelete("config/" .. tostring(configToSave) .. ".xml");
             else
-                local v778 = xmlLoadFile("config/configs.xml");
-                if not v778 then
-                    fileDelete("config/" .. tostring(v774) .. ".xml");
+                local configsFileXML2 = xmlLoadFile("config/configs.xml");
+                if not configsFileXML2 then
+                    fileDelete("config/" .. tostring(configToSave) .. ".xml");
                     return false;
                 else
-                    local v779 = xmlCreateChild(v778, "config");
-                    xmlNodeSetAttribute(v779, "src", tostring(v774));
-                    xmlSaveFile(v778);
-                    xmlUnloadFile(v778);
+                    local newConfigNode = xmlCreateChild(configsFileXML2, "config");
+                    xmlNodeSetAttribute(newConfigNode, "src", tostring(configToSave));
+                    xmlSaveFile(configsFileXML2);
+                    xmlUnloadFile(configsFileXML2);
                 end;
             end;
-            if v776.Maps then
-                local v780 = xmlCreateChild(v777, "mappack");
-                xmlNodeSetAttribute(v780, "automatics", getTacticsData("automatics", false));
-                local v781 = xmlCreateChild(v780, "cycler");
-                local v782 = "";
-                for v783, v784 in ipairs(getTacticsData("Resources", false)) do
-                    if v783 > 1 then
-                        v782 = v782 .. ",'" .. tostring(v784[1]) .. "'";
+            if saveOptions.Maps then
+                local mapPackNode2 = xmlCreateChild(saveXML, "mappack");
+                xmlNodeSetAttribute(mapPackNode2, "automatics", getTacticsData("automatics", false));
+                local cyclerNode = xmlCreateChild(mapPackNode2, "cycler");
+                local resnamesString = "";
+                for resourceIndex, resourceInfo in ipairs(getTacticsData("Resources", false)) do
+                    if resourceIndex > 1 then
+                        resnamesString = resnamesString .. ",'" .. tostring(resourceInfo[1]) .. "'";
                     else
-                        v782 = "'" .. tostring(v784[1]) .. "'";
+                        resnamesString = "'" .. tostring(resourceInfo[1]) .. "'";
                     end;
                 end;
-                xmlNodeSetAttribute(v781, "resnames", "[" .. v782 .. "]");
-                v781 = xmlCreateChild(v780, "disabled");
-                v782 = "";
-                for v785 in pairs(getTacticsData("map_disabled", false)) do
-                    if #v782 > 0 then
-                        v782 = v782 .. ",'" .. tostring(v785) .. "'";
+                xmlNodeSetAttribute(cyclerNode, "resnames", "[" .. resnamesString .. "]");
+                cyclerNode = xmlCreateChild(mapPackNode2, "disabled");
+                resnamesString = "";
+                for disabledMapName2 in pairs(getTacticsData("map_disabled", false)) do
+                    if #resnamesString > 0 then
+                        resnamesString = resnamesString .. ",'" .. tostring(disabledMapName2) .. "'";
                     else
-                        v782 = "'" .. tostring(v785) .. "'";
+                        resnamesString = "'" .. tostring(disabledMapName2) .. "'";
                     end;
                 end;
-                xmlNodeSetAttribute(v781, "resnames", "[" .. v782 .. "]");
+                xmlNodeSetAttribute(cyclerNode, "resnames", "[" .. resnamesString .. "]");
             end;
-            if v776.Settings then
-                local v786 = xmlCreateChild(v777, "settings");
-                local l_pairs_3 = pairs;
-                local v788 = getTacticsData("modes", false) or {};
-                for v789, v790 in l_pairs_3(v788) do
-                    local v791 = xmlCreateChild(v786, "mode");
-                    xmlNodeSetAttribute(v791, "name", v789);
-                    for v792, v793 in pairs(v790) do
-                        xmlNodeSetAttribute(v791, v792, v793);
+            if saveOptions.Settings then
+                local settingsNode = xmlCreateChild(saveXML, "settings");
+                local pairsFunc3 = pairs;
+                local modesData = getTacticsData("modes", false) or {};
+                for modeNameKey, modeData in pairsFunc3(modesData) do
+                    local modeNode = xmlCreateChild(settingsNode, "mode");
+                    xmlNodeSetAttribute(modeNode, "name", modeNameKey);
+                    for modeSettingKey, modeSettingValue in pairs(modeData) do
+                        xmlNodeSetAttribute(modeNode, modeSettingKey, modeSettingValue);
                     end;
                 end;
-                l_pairs_3 = xmlCreateChild(v786, "settings");
-                for v794, v795 in pairs(getTacticsData("settings", false)) do
-                    xmlNodeSetAttribute(l_pairs_3, v794, tostring(v795));
+                pairsFunc3 = xmlCreateChild(settingsNode, "settings");
+                for settingKeyName, settingKeyValue in pairs(getTacticsData("settings", false)) do
+                    xmlNodeSetAttribute(pairsFunc3, settingKeyName, tostring(settingKeyValue));
                 end;
-                v788 = xmlCreateChild(v786, "glitches");
-                for v796, v797 in pairs(getTacticsData("glitches", false)) do
-                    xmlNodeSetAttribute(v788, v796, tostring(v797));
+                modesData = xmlCreateChild(settingsNode, "glitches");
+                for glitchKeyName, glitchKeyValue in pairs(getTacticsData("glitches", false)) do
+                    xmlNodeSetAttribute(modesData, glitchKeyName, tostring(glitchKeyValue));
                 end;
-                local v798 = xmlCreateChild(v786, "cheats");
-                for v799, v800 in pairs(getTacticsData("cheats", false)) do
-                    xmlNodeSetAttribute(v798, v799, tostring(v800));
+                local cheatsNode = xmlCreateChild(settingsNode, "cheats");
+                for cheatKeyName, cheatKeyValue in pairs(getTacticsData("cheats", false)) do
+                    xmlNodeSetAttribute(cheatsNode, cheatKeyName, tostring(cheatKeyValue));
                 end;
-                local v801 = xmlCreateChild(v786, "limites");
-                for v802, v803 in pairs(getTacticsData("limites", false)) do
-                    xmlNodeSetAttribute(v801, v802, tostring(v803));
+                local limitsNode = xmlCreateChild(settingsNode, "limites");
+                for limitKeyName, limitKeyValue in pairs(getTacticsData("limites", false)) do
+                    xmlNodeSetAttribute(limitsNode, limitKeyName, tostring(limitKeyValue));
                 end;
             end;
-            if v776.Teams then
-                local v804 = xmlCreateChild(v777, "teams");
-                local v805 = getElementsByType("team");
-                for v806, v807 in ipairs(v805) do
-                    if v806 > 1 then
-                        local v808 = xmlCreateChild(v804, "team");
-                        xmlNodeSetAttribute(v808, "side", tostring(getElementData(v807, "Side")));
-                        xmlNodeSetAttribute(v808, "name", getTeamName(v807));
-                        local v809 = "";
-                        for v810, v811 in ipairs(getElementData(v807, "Skins")) do
-                            if v810 > 1 then
-                                v809 = v809 .. "," .. tostring(v811);
+            if saveOptions.Teams then
+                local teamsNode = xmlCreateChild(saveXML, "teams");
+                local allTeams = getElementsByType("team");
+                for teamIdx, teamElement3 in ipairs(allTeams) do
+                    if teamIdx > 1 then
+                        local teamNode2 = xmlCreateChild(teamsNode, "team");
+                        xmlNodeSetAttribute(teamNode2, "side", tostring(getElementData(teamElement3, "Side")));
+                        xmlNodeSetAttribute(teamNode2, "name", getTeamName(teamElement3));
+                        local skinsString = "";
+                        for skinIndex, skinID in ipairs(getElementData(teamElement3, "Skins")) do
+                            if skinIndex > 1 then
+                                skinsString = skinsString .. "," .. tostring(skinID);
                             else
-                                v809 = tostring(v811);
+                                skinsString = tostring(skinID);
                             end;
                         end;
-                        xmlNodeSetAttribute(v808, "skins", "[" .. v809 .. "]");
-                        local v812, v813, v814 = getTeamColor(v807);
-                        xmlNodeSetAttribute(v808, "color", "[" .. v812 .. "," .. v813 .. "," .. v814 .. "]");
+                        xmlNodeSetAttribute(teamNode2, "skins", "[" .. skinsString .. "]");
+                        local teamColorR2, teamColorG2, teamColorB2 = getTeamColor(teamElement3);
+                        xmlNodeSetAttribute(teamNode2, "color", "[" .. teamColorR2 .. "," .. teamColorG2 .. "," .. teamColorB2 .. "]");
                     else
-                        local v815 = xmlCreateChild(v804, "referee");
-                        xmlNodeSetAttribute(v815, "name", getTeamName(v807));
-                        local v816, v817, v818 = getTeamColor(v807);
-                        xmlNodeSetAttribute(v815, "color", "[" .. v816 .. "," .. v817 .. "," .. v818 .. "]");
+                        local refereeNode = xmlCreateChild(teamsNode, "referee");
+                        xmlNodeSetAttribute(refereeNode, "name", getTeamName(teamElement3));
+                        local refColorR, refColorG, refColorB = getTeamColor(teamElement3);
+                        xmlNodeSetAttribute(refereeNode, "color", "[" .. refColorR .. "," .. refColorG .. "," .. refColorB .. "]");
                     end;
                 end;
             end;
-            if v776.Weapons then
-                local v819 = xmlCreateChild(v777, "weaponpack");
-                xmlNodeSetAttribute(v819, "slots", tostring(getTacticsData("weapon_slots")) or "0");
-                node2 = xmlCreateChild(v819, "weapons");
-                local l_pairs_4 = pairs;
-                local v821 = getTacticsData("weaponspack", false) or {};
-                for v822, v823 in l_pairs_4(v821) do
-                    xmlNodeSetAttribute(node2, v822, tostring(v823));
+            if saveOptions.Weapons then
+                local weaponpackNode = xmlCreateChild(saveXML, "weaponpack");
+                xmlNodeSetAttribute(weaponpackNode, "slots", tostring(getTacticsData("weapon_slots")) or "0");
+                weaponChildNode = xmlCreateChild(weaponpackNode, "weapons");
+                local pairsFunc4 = pairs;
+                local weaponsData = getTacticsData("weaponspack", false) or {};
+                for weaponName, weaponValue in pairsFunc4(weaponsData) do
+                    xmlNodeSetAttribute(weaponChildNode, weaponName, tostring(weaponValue));
                 end;
-                node2 = xmlCreateChild(v819, "balance");
-                l_pairs_4 = pairs;
-                v821 = getTacticsData("weapon_balance", false) or {};
-                for v824, v825 in l_pairs_4(v821) do
-                    xmlNodeSetAttribute(node2, v824, tostring(v825));
+                weaponChildNode = xmlCreateChild(weaponpackNode, "balance");
+                pairsFunc4 = pairs;
+                weaponsData = getTacticsData("weapon_balance", false) or {};
+                for balanceKey, balanceValue in pairsFunc4(weaponsData) do
+                    xmlNodeSetAttribute(weaponChildNode, balanceKey, tostring(balanceValue));
                 end;
-                node2 = xmlCreateChild(v819, "cost");
-                l_pairs_4 = pairs;
-                v821 = getTacticsData("weapon_cost", false) or {};
-                for v826, v827 in l_pairs_4(v821) do
-                    xmlNodeSetAttribute(node2, v826, tostring(v827));
+                weaponChildNode = xmlCreateChild(weaponpackNode, "cost");
+                pairsFunc4 = pairs;
+                weaponsData = getTacticsData("weapon_cost", false) or {};
+                for costKey, costValue in pairsFunc4(weaponsData) do
+                    xmlNodeSetAttribute(weaponChildNode, costKey, tostring(costValue));
                 end;
-                node2 = xmlCreateChild(v819, "slot");
-                l_pairs_4 = pairs;
-                v821 = getTacticsData("weapon_slot", false) or {};
-                for v828, v829 in l_pairs_4(v821) do
-                    xmlNodeSetAttribute(node2, v828, tostring(v829));
+                weaponChildNode = xmlCreateChild(weaponpackNode, "slot");
+                pairsFunc4 = pairs;
+                weaponsData = getTacticsData("weapon_slot", false) or {};
+                for slotKey, slotValue in pairsFunc4(weaponsData) do
+                    xmlNodeSetAttribute(weaponChildNode, slotKey, tostring(slotValue));
                 end;
             end;
-            if v776.Shooting then
-                local v830 = xmlCreateChild(v777, "shooting");
-                for _, v832 in ipairs(v578) do
-                    local v833 = {};
-                    for _, v835 in ipairs(v579) do
-                        local v836 = getWeaponProperty(v832, "pro", v835);
-                        local v837 = getOriginalWeaponProperty(v832, "pro", v835);
-                        if v835 == "flags" and v836 ~= v837 then
-                            table.insert(v833, {
-                                v835, 
-                                string.reverse(string.format("%04X", v836))
+            if saveOptions.Shooting then
+                local shootingNode = xmlCreateChild(saveXML, "shooting");
+                for _, weaponID2 in ipairs(weaponIDs) do
+                    local changedProperties = {};
+                    for _, propertyName2 in ipairs(weaponProperties) do
+                        local currentPropertyValue = getWeaponProperty(weaponID2, "pro", propertyName2);
+                        local originalPropertyValue = getOriginalWeaponProperty(weaponID2, "pro", propertyName2);
+                        if propertyName2 == "flags" and currentPropertyValue ~= originalPropertyValue then
+                            table.insert(changedProperties, {
+                                propertyName2, 
+                                string.reverse(string.format("%04X", currentPropertyValue))
                             });
-                        elseif string.format("%.4f", v836) ~= string.format("%.4f", v837) then
-                            if v835 == "damage" then
-                                table.insert(v833, {
-                                    v835, 
-                                    v836 / 3
+                        elseif string.format("%.4f", currentPropertyValue) ~= string.format("%.4f", originalPropertyValue) then
+                            if propertyName2 == "damage" then
+                                table.insert(changedProperties, {
+                                    propertyName2, 
+                                    currentPropertyValue / 3
                                 });
                             else
-                                table.insert(v833, {
-                                    v835, 
-                                    v836
+                                table.insert(changedProperties, {
+                                    propertyName2, 
+                                    currentPropertyValue
                                 });
                             end;
                         end;
                     end;
-                    if #v833 > 0 then
-                        local v838 = xmlCreateChild(v830, "properties");
-                        xmlNodeSetAttribute(v838, "weapon", tostring(v832));
-                        for _, v840 in ipairs(v833) do
-                            xmlNodeSetAttribute(v838, v840[1], tostring(v840[2]));
+                    if #changedProperties > 0 then
+                        local propertiesNode = xmlCreateChild(shootingNode, "properties");
+                        xmlNodeSetAttribute(propertiesNode, "weapon", tostring(weaponID2));
+                        for _, propertyEntry in ipairs(changedProperties) do
+                            xmlNodeSetAttribute(propertiesNode, propertyEntry[1], tostring(propertyEntry[2]));
                         end;
                     end;
                 end;
             end;
-            if v776.Vehicles then
-                local v841 = xmlCreateChild(v777, "vehiclepack");
-                local v842 = "";
-                local v843 = getTacticsData("disabled_vehicles", false) or {};
-                for v844, v845 in pairs(v843) do
-                    if v845 == true then
-                        if #v842 > 0 then
-                            v842 = v842 .. "," .. tostring(v844);
+            if saveOptions.Vehicles then
+                local vehiclepackNode = xmlCreateChild(saveXML, "vehiclepack");
+                local modelsString = "";
+                local disabledVehiclesTable = getTacticsData("disabled_vehicles", false) or {};
+                for modelKey, modelValue in pairs(disabledVehiclesTable) do
+                    if modelValue == true then
+                        if #modelsString > 0 then
+                            modelsString = modelsString .. "," .. tostring(modelKey);
                         else
-                            v842 = tostring(v844);
+                            modelsString = tostring(modelKey);
                         end;
                     end;
                 end;
-                xmlNodeSetAttribute(v841, "models", "[" .. v842 .. "]");
+                xmlNodeSetAttribute(vehiclepackNode, "models", "[" .. modelsString .. "]");
             end;
-            if v776.Handling then
-                local v846 = xmlCreateChild(v777, "handlings");
-                local v847 = getTacticsData("handlings", false) or {};
-                for v848 = 400, 611 do
-                    if #getVehicleNameFromModel(v848) > 0 then
-                        local v849 = nil;
-                        local l_pairs_5 = pairs;
-                        local v851 = v847[v848] or {};
-                        for v852, v853 in l_pairs_5(v851) do
-                            if v853 ~= nil then
-                                if not v849 then
-                                    v849 = xmlCreateChild(v846, "handling");
-                                    xmlNodeSetAttribute(v849, "model", tostring(v848));
+            if saveOptions.Handling then
+                local handlingsNode = xmlCreateChild(saveXML, "handlings");
+                local allHandlings = getTacticsData("handlings", false) or {};
+                for vehicleModelID2 = 400, 611 do
+                    if #getVehicleNameFromModel(vehicleModelID2) > 0 then
+                        local handlingNode2 = nil;
+                        local pairsFunc5 = pairs;
+                        local modelHandling = allHandlings[vehicleModelID2] or {};
+                        for handlingAttrName, handlingAttrValue in pairsFunc5(modelHandling) do
+                            if handlingAttrValue ~= nil then
+                                if not handlingNode2 then
+                                    handlingNode2 = xmlCreateChild(handlingsNode, "handling");
+                                    xmlNodeSetAttribute(handlingNode2, "model", tostring(vehicleModelID2));
                                 end;
-                                if v852 == "sirens" then
-                                    sirenstring = "[" .. tostring(v853.count) .. "," .. tostring(v853.type) .. "," .. (v853.flags["360"] and "1" or "0") .. "," .. (v853.flags.DoLOSCheck and "1" or "0") .. "," .. (v853.flags.UseRandomiser and "1" or "0") .. "," .. (v853.flags.Silent and "1" or "0");
-                                    for v854 = 1, v853.count do
-                                        sirenstring = sirenstring .. string.format(",%.3f,%.3f,%.3f,'%s',%d", v853[v854].x, v853[v854].y, v853[v854].z, v853[v854].color, v853[v854].minalpha);
+                                if handlingAttrName == "sirens" then
+                                    sirenDataString = "[" .. tostring(handlingAttrValue.count) .. "," .. tostring(handlingAttrValue.type) .. "," .. (handlingAttrValue.flags["360"] and "1" or "0") .. "," .. (handlingAttrValue.flags.DoLOSCheck and "1" or "0") .. "," .. (handlingAttrValue.flags.UseRandomiser and "1" or "0") .. "," .. (handlingAttrValue.flags.Silent and "1" or "0");
+                                    for sirenIndex3 = 1, handlingAttrValue.count do
+                                        sirenDataString = sirenDataString .. string.format(",%.3f,%.3f,%.3f,'%s',%d", handlingAttrValue[sirenIndex3].x, handlingAttrValue[sirenIndex3].y, handlingAttrValue[sirenIndex3].z, handlingAttrValue[sirenIndex3].color, handlingAttrValue[sirenIndex3].minalpha);
                                     end;
-                                    xmlNodeSetAttribute(v849, v852, sirenstring .. "]");
-                                elseif type(v853) == "table" then
-                                    xmlNodeSetAttribute(v849, v852, "[" .. v853[1] .. "," .. v853[2] .. "," .. v853[3] .. "]");
-                                elseif v852 == "modelFlags" or v852 == "handlingFlags" then
-                                    xmlNodeSetAttribute(v849, v852, string.reverse(string.format("%08X", tonumber(v853))));
+                                    xmlNodeSetAttribute(handlingNode2, handlingAttrName, sirenDataString .. "]");
+                                elseif type(handlingAttrValue) == "table" then
+                                    xmlNodeSetAttribute(handlingNode2, handlingAttrName, "[" .. handlingAttrValue[1] .. "," .. handlingAttrValue[2] .. "," .. handlingAttrValue[3] .. "]");
+                                elseif handlingAttrName == "modelFlags" or handlingAttrName == "handlingFlags" then
+                                    xmlNodeSetAttribute(handlingNode2, handlingAttrName, string.reverse(string.format("%08X", tonumber(handlingAttrValue))));
                                 else
-                                    xmlNodeSetAttribute(v849, v852, tostring(v853));
+                                    xmlNodeSetAttribute(handlingNode2, handlingAttrName, tostring(handlingAttrValue));
                                 end;
                             end;
                         end;
                     end;
                 end;
             end;
-            if v776.Weather then
-                local v855 = xmlCreateChild(v777, "weather");
-                local v856 = getTacticsData("Weather", false) or {};
-                for v857 = 0, 23 do
-                    if v856[v857] then
-                        local v858 = xmlCreateChild(v855, "weather");
-                        xmlNodeSetAttribute(v858, "hour", tostring(v857));
-                        xmlNodeSetAttribute(v858, "wind", string.format("[%.2f,%.2f,%.2f]", v856[v857].wind[1], v856[v857].wind[2], v856[v857].wind[3]));
-                        xmlNodeSetAttribute(v858, "rain", tostring(v856[v857].rain));
-                        xmlNodeSetAttribute(v858, "far", tostring(v856[v857].far));
-                        xmlNodeSetAttribute(v858, "fog", tostring(v856[v857].fog));
-                        xmlNodeSetAttribute(v858, "sky", string.format("[%i,%i,%i,%i,%i,%i]", v856[v857].sky[1], v856[v857].sky[2], v856[v857].sky[3], v856[v857].sky[4], v856[v857].sky[5], v856[v857].sky[6]));
-                        xmlNodeSetAttribute(v858, "clouds", tostring(v856[v857].clouds));
-                        xmlNodeSetAttribute(v858, "birds", tostring(v856[v857].birds));
-                        xmlNodeSetAttribute(v858, "sun", string.format("[%i,%i,%i,%i,%i,%i,%.2f]", v856[v857].sun[1], v856[v857].sun[2], v856[v857].sun[3], v856[v857].sun[4], v856[v857].sun[5], v856[v857].sun[6], v856[v857].sunsize));
-                        xmlNodeSetAttribute(v858, "water", string.format("[%i,%i,%i,%i]", v856[v857].water[1], v856[v857].water[2], v856[v857].water[3], v856[v857].water[4]));
-                        xmlNodeSetAttribute(v858, "wave", tostring(v856[v857].wave));
-                        xmlNodeSetAttribute(v858, "level", tostring(v856[v857].level));
-                        xmlNodeSetAttribute(v858, "heat", tostring(v856[v857].heat));
-                        xmlNodeSetAttribute(v858, "effect", tostring(v856[v857].effect));
+            if saveOptions.Weather then
+                local weatherNode2 = xmlCreateChild(saveXML, "weather");
+                local allWeatherData = getTacticsData("Weather", false) or {};
+                for hourIndex = 0, 23 do
+                    if allWeatherData[hourIndex] then
+                        local weatherHourNode = xmlCreateChild(weatherNode2, "weather");
+                        xmlNodeSetAttribute(weatherHourNode, "hour", tostring(hourIndex));
+                        xmlNodeSetAttribute(weatherHourNode, "wind", string.format("[%.2f,%.2f,%.2f]", allWeatherData[hourIndex].wind[1], allWeatherData[hourIndex].wind[2], allWeatherData[hourIndex].wind[3]));
+                        xmlNodeSetAttribute(weatherHourNode, "rain", tostring(allWeatherData[hourIndex].rain));
+                        xmlNodeSetAttribute(weatherHourNode, "far", tostring(allWeatherData[hourIndex].far));
+                        xmlNodeSetAttribute(weatherHourNode, "fog", tostring(allWeatherData[hourIndex].fog));
+                        xmlNodeSetAttribute(weatherHourNode, "sky", string.format("[%i,%i,%i,%i,%i,%i]", allWeatherData[hourIndex].sky[1], allWeatherData[hourIndex].sky[2], allWeatherData[hourIndex].sky[3], allWeatherData[hourIndex].sky[4], allWeatherData[hourIndex].sky[5], allWeatherData[hourIndex].sky[6]));
+                        xmlNodeSetAttribute(weatherHourNode, "clouds", tostring(allWeatherData[hourIndex].clouds));
+                        xmlNodeSetAttribute(weatherHourNode, "birds", tostring(allWeatherData[hourIndex].birds));
+                        xmlNodeSetAttribute(weatherHourNode, "sun", string.format("[%i,%i,%i,%i,%i,%i,%.2f]", allWeatherData[hourIndex].sun[1], allWeatherData[hourIndex].sun[2], allWeatherData[hourIndex].sun[3], allWeatherData[hourIndex].sun[4], allWeatherData[hourIndex].sun[5], allWeatherData[hourIndex].sun[6], allWeatherData[hourIndex].sunsize));
+                        xmlNodeSetAttribute(weatherHourNode, "water", string.format("[%i,%i,%i,%i]", allWeatherData[hourIndex].water[1], allWeatherData[hourIndex].water[2], allWeatherData[hourIndex].water[3], allWeatherData[hourIndex].water[4]));
+                        xmlNodeSetAttribute(weatherHourNode, "wave", tostring(allWeatherData[hourIndex].wave));
+                        xmlNodeSetAttribute(weatherHourNode, "level", tostring(allWeatherData[hourIndex].level));
+                        xmlNodeSetAttribute(weatherHourNode, "heat", tostring(allWeatherData[hourIndex].heat));
+                        xmlNodeSetAttribute(weatherHourNode, "effect", tostring(allWeatherData[hourIndex].effect));
                     end;
                 end;
             end;
-            if v776.AC then
-                local v859 = xmlCreateChild(v777, "anticheat");
-                xmlNodeSetAttribute(v859, "action_detection", getTacticsData("anticheat", "action_detection", false));
-                local v860 = xmlCreateChild(v859, "speedhach");
-                xmlNodeSetAttribute(v860, "enable", getTacticsData("anticheat", "speedhach", false));
-                v860 = xmlCreateChild(v859, "godmode");
-                xmlNodeSetAttribute(v860, "enable", getTacticsData("anticheat", "godmode", false));
-                v860 = xmlCreateChild(v859, "mods");
-                xmlNodeSetAttribute(v860, "enable", getTacticsData("anticheat", "mods", false));
-                local l_ipairs_0 = ipairs;
-                local v862 = getTacticsData("anticheat", "modslist", false) or {};
-                for _, v864 in l_ipairs_0(v862) do
-                    node3 = xmlCreateChild(v860, "mod");
-                    xmlNodeSetAttribute(node3, "name", v864.name);
-                    xmlNodeSetAttribute(node3, "search", v864.search);
-                    xmlNodeSetAttribute(node3, "type", v864.type);
+            if saveOptions.AC then
+                local anticheatNode2 = xmlCreateChild(saveXML, "anticheat");
+                xmlNodeSetAttribute(anticheatNode2, "action_detection", getTacticsData("anticheat", "action_detection", false));
+                local anticheatChild = xmlCreateChild(anticheatNode2, "speedhach");
+                xmlNodeSetAttribute(anticheatChild, "enable", getTacticsData("anticheat", "speedhach", false));
+                anticheatChild = xmlCreateChild(anticheatNode2, "godmode");
+                xmlNodeSetAttribute(anticheatChild, "enable", getTacticsData("anticheat", "godmode", false));
+                anticheatChild = xmlCreateChild(anticheatNode2, "mods");
+                xmlNodeSetAttribute(anticheatChild, "enable", getTacticsData("anticheat", "mods", false));
+                local ipairsFunc = ipairs;
+                local modsListData = getTacticsData("anticheat", "modslist", false) or {};
+                for _, modEntry in ipairsFunc(modsListData) do
+                    modChildNode = xmlCreateChild(anticheatChild, "mod");
+                    xmlNodeSetAttribute(modChildNode, "name", modEntry.name);
+                    xmlNodeSetAttribute(modChildNode, "search", modEntry.search);
+                    xmlNodeSetAttribute(modChildNode, "type", modEntry.type);
                 end;
             end;
-            xmlSaveFile(v777);
-            xmlUnloadFile(v777);
-            if v774 == getCurrentConfig() then
-                startConfig(v774);
+            xmlSaveFile(saveXML);
+            xmlUnloadFile(saveXML);
+            if configToSave == getCurrentConfig() then
+                startConfig(configToSave);
             else
                 refreshConfiglist(root);
             end;
             return true;
         end;
     end;
-    deleteConfig = function(v865, _) --[[ Line: 778 ]]
-        if fileExists("config/" .. tostring(v865) .. ".xml") then
-            fileDelete("config/" .. tostring(v865) .. ".xml");
-            local v867 = getCurrentConfig();
-            local v868 = xmlLoadFile("config/configs.xml");
-            for _, v870 in ipairs(xmlNodeGetChildren(v868)) do
-                if xmlNodeGetName(v870) == "config" and xmlNodeGetAttribute(v870, "src") == tostring(v865) then
-                    xmlDestroyNode(v870);
+    deleteConfig = function(configToDelete, _) 
+        if fileExists("config/" .. tostring(configToDelete) .. ".xml") then
+            fileDelete("config/" .. tostring(configToDelete) .. ".xml");
+            local currentConfigName = getCurrentConfig();
+            local configsXML3 = xmlLoadFile("config/configs.xml");
+            for _, configNode3 in ipairs(xmlNodeGetChildren(configsXML3)) do
+                if xmlNodeGetName(configNode3) == "config" and xmlNodeGetAttribute(configNode3, "src") == tostring(configToDelete) then
+                    xmlDestroyNode(configNode3);
                 end;
             end;
-            xmlSaveFile(v868);
-            xmlUnloadFile(v868);
-            if tostring(v867) == tostring(v865) then
+            xmlSaveFile(configsXML3);
+            xmlUnloadFile(configsXML3);
+            if tostring(currentConfigName) == tostring(configToDelete) then
                 setTimer(defaultConfig, 50, 1);
             else
                 refreshConfiglist(root);
@@ -3384,27 +3370,27 @@ end)();
             return false;
         end;
     end;
-    renameConfig = function(v871, v872, _) --[[ Line: 799 ]]
-        if fileExists("config/" .. tostring(v871) .. ".xml") and not fileExists("config/" .. tostring(v872) .. ".xml") then
-            local v874 = xmlLoadFile("config/configs.xml");
-            for _, v876 in ipairs(xmlNodeGetChildren(v874)) do
-                if xmlNodeGetName(v876) == "config" and xmlNodeGetAttribute(v876, "src") == tostring(v872) then
+    renameConfig = function(oldConfigName, newConfigName, _) 
+        if fileExists("config/" .. tostring(oldConfigName) .. ".xml") and not fileExists("config/" .. tostring(newConfigName) .. ".xml") then
+            local configsXML4 = xmlLoadFile("config/configs.xml");
+            for _, configNode4 in ipairs(xmlNodeGetChildren(configsXML4)) do
+                if xmlNodeGetName(configNode4) == "config" and xmlNodeGetAttribute(configNode4, "src") == tostring(newConfigName) then
                     return false;
                 end;
             end;
-            if not fileRename("config/" .. tostring(v871) .. ".xml", "config/" .. tostring(v872) .. ".xml") then
+            if not fileRename("config/" .. tostring(oldConfigName) .. ".xml", "config/" .. tostring(newConfigName) .. ".xml") then
                 return false;
             else
-                for _, v878 in ipairs(xmlNodeGetChildren(v874)) do
-                    if xmlNodeGetName(v878) == "current" and xmlNodeGetAttribute(v878, "src") == tostring(v871) then
-                        xmlNodeSetAttribute(v878, "src", tostring(v872));
+                for _, configNode5 in ipairs(xmlNodeGetChildren(configsXML4)) do
+                    if xmlNodeGetName(configNode5) == "current" and xmlNodeGetAttribute(configNode5, "src") == tostring(oldConfigName) then
+                        xmlNodeSetAttribute(configNode5, "src", tostring(newConfigName));
                     end;
-                    if xmlNodeGetName(v878) == "config" and xmlNodeGetAttribute(v878, "src") == tostring(v871) then
-                        xmlNodeSetAttribute(v878, "src", tostring(v872));
+                    if xmlNodeGetName(configNode5) == "config" and xmlNodeGetAttribute(configNode5, "src") == tostring(oldConfigName) then
+                        xmlNodeSetAttribute(configNode5, "src", tostring(newConfigName));
                     end;
                 end;
-                xmlSaveFile(v874);
-                xmlUnloadFile(v874);
+                xmlSaveFile(configsXML4);
+                xmlUnloadFile(configsXML4);
                 refreshConfiglist(root);
                 return true;
             end;
@@ -3412,31 +3398,31 @@ end)();
             return false;
         end;
     end;
-    addConfig = function(v879, _) --[[ Line: 823 ]]
-        if fileExists("config/" .. tostring(v879) .. ".xml") then
-            local v881 = xmlLoadFile("config/configs.xml");
-            for _, v883 in ipairs(xmlNodeGetChildren(v881)) do
-                if xmlNodeGetName(v883) == "config" and xmlNodeGetAttribute(v883, "src") == tostring(v879) then
+    addConfig = function(configToAdd, _) 
+        if fileExists("config/" .. tostring(configToAdd) .. ".xml") then
+            local configsXML5 = xmlLoadFile("config/configs.xml");
+            for _, configNode6 in ipairs(xmlNodeGetChildren(configsXML5)) do
+                if xmlNodeGetName(configNode6) == "config" and xmlNodeGetAttribute(configNode6, "src") == tostring(configToAdd) then
                     return false;
                 end;
             end;
-            local v884 = xmlCreateChild(v881, "config");
-            xmlNodeSetAttribute(v884, "src", tostring(v879));
-            xmlSaveFile(v881);
-            xmlUnloadFile(v881);
+            local addedConfigNode = xmlCreateChild(configsXML5, "config");
+            xmlNodeSetAttribute(addedConfigNode, "src", tostring(configToAdd));
+            xmlSaveFile(configsXML5);
+            xmlUnloadFile(configsXML5);
             refreshConfiglist(root);
             return true;
         else
             return false;
         end;
     end;
-    defaultConfig = function(v885) --[[ Line: 840 ]]
+    defaultConfig = function(isFirstLoad) 
         if not fileExists("config/_default.xml") then
-            local v886 = xmlLoadFile("config/configs.xml");
-            local v887 = xmlCreateChild(v886, "config");
-            xmlNodeSetAttribute(v887, "src", "_default");
-            xmlSaveFile(v886);
-            xmlUnloadFile(v886);
+            local configsXML6 = xmlLoadFile("config/configs.xml");
+            local defaultConfigNode = xmlCreateChild(configsXML6, "config");
+            xmlNodeSetAttribute(defaultConfigNode, "src", "_default");
+            xmlSaveFile(configsXML6);
+            xmlUnloadFile(configsXML6);
         else
             if fileExists("config/_default.xml") then
                 local success = fileDelete("config/_default.xml");
@@ -3445,495 +3431,495 @@ end)();
                     end;
             end;
         end;
-        local v888 = xmlCreateFile("config/_default.xml", "config");
-        local v889 = xmlCreateChild(v888, "teams");
-        local v890 = xmlCreateChild(v889, "referee");
-        xmlNodeSetAttribute(v890, "name", "Referee");
-        xmlNodeSetAttribute(v890, "color", "[255,255,255]");
-        local v891 = xmlCreateChild(v889, "team");
-        xmlNodeSetAttribute(v891, "name", "Team1");
-        xmlNodeSetAttribute(v891, "skins", "[292]");
-        xmlNodeSetAttribute(v891, "color", "[192,96,0]");
-        xmlNodeSetAttribute(v891, "side", "1");
-        v891 = xmlCreateChild(v889, "team");
-        xmlNodeSetAttribute(v891, "name", "Team2");
-        xmlNodeSetAttribute(v891, "skins", "[308]");
-        xmlNodeSetAttribute(v891, "color", "[0,96,192]");
-        xmlNodeSetAttribute(v891, "side", "2");
-        v889 = xmlCreateChild(v888, "weaponpack");
-        xmlNodeSetAttribute(v889, "slots", "3");
-        v891 = xmlCreateChild(v889, "weapons");
-        xmlNodeSetAttribute(v891, "silenced", "102");
-        xmlNodeSetAttribute(v891, "deagle", "49");
-        xmlNodeSetAttribute(v891, "shotgun", "80");
-        xmlNodeSetAttribute(v891, "spas12", "49");
-        xmlNodeSetAttribute(v891, "mp5", "210");
-        xmlNodeSetAttribute(v891, "ak47", "300");
-        xmlNodeSetAttribute(v891, "m4", "200");
-        xmlNodeSetAttribute(v891, "rifle", "100");
-        xmlNodeSetAttribute(v891, "sniper", "50");
-        xmlNodeSetAttribute(v891, "grenade", "1");
-        xmlNodeSetAttribute(v891, "teargas", "1");
-        xmlNodeSetAttribute(v891, "molotov", "1");
-        xmlNodeSetAttribute(v891, "knife", "1");
-        v891 = xmlCreateChild(v889, "balance");
-        v891 = xmlCreateChild(v889, "cost");
-        v891 = xmlCreateChild(v889, "slot");
-        v889 = xmlCreateChild(v888, "shooting");
-        v891 = xmlCreateChild(v889, "properties");
-        xmlNodeSetAttribute(v891, "weapon", "22");
-        xmlNodeSetAttribute(v891, "maximum_clip_ammo", "17");
-        xmlNodeSetAttribute(v891, "flags", "3303");
-        v891 = xmlCreateChild(v889, "properties");
-        xmlNodeSetAttribute(v891, "weapon", "26");
-        xmlNodeSetAttribute(v891, "maximum_clip_ammo", "2");
-        xmlNodeSetAttribute(v891, "flags", "3303");
-        v891 = xmlCreateChild(v889, "properties");
-        xmlNodeSetAttribute(v891, "weapon", "28");
-        xmlNodeSetAttribute(v891, "maximum_clip_ammo", "50");
-        xmlNodeSetAttribute(v891, "flags", "3303");
-        v891 = xmlCreateChild(v889, "properties");
-        xmlNodeSetAttribute(v891, "weapon", "30");
-        xmlNodeSetAttribute(v891, "damage", "12");
-        v891 = xmlCreateChild(v889, "properties");
-        xmlNodeSetAttribute(v891, "weapon", "32");
-        xmlNodeSetAttribute(v891, "maximum_clip_ammo", "50");
-        xmlNodeSetAttribute(v891, "flags", "3303");
-        v891 = xmlCreateChild(v889, "properties");
-        xmlNodeSetAttribute(v891, "weapon", "33");
-        xmlNodeSetAttribute(v891, "flags", "830A");
-        v889 = xmlCreateChild(v888, "handlings");
-        v889 = xmlCreateChild(v888, "settings");
-        v891 = xmlCreateChild(v889, "settings");
-        xmlNodeSetAttribute(v891, "autobalance", "false");
-        xmlNodeSetAttribute(v891, "autoswap", "true");
-        xmlNodeSetAttribute(v891, "blurlevel", "0");
-        xmlNodeSetAttribute(v891, "countdown_auto", "true");
-        xmlNodeSetAttribute(v891, "countdown_force", "0:10");
-        xmlNodeSetAttribute(v891, "countdown_start", "3");
-        xmlNodeSetAttribute(v891, "dontfire", "false");
-        xmlNodeSetAttribute(v891, "friendly_fire", "false");
-        xmlNodeSetAttribute(v891, "gamespeed", "1.0");
-        xmlNodeSetAttribute(v891, "ghostmode", "none|none,team,all");
-        xmlNodeSetAttribute(v891, "gravity", "0.008");
-        xmlNodeSetAttribute(v891, "heli_killing", "true");
-        xmlNodeSetAttribute(v891, "player_can_driveby", "true");
-        xmlNodeSetAttribute(v891, "player_dead_visible", "true");
-        xmlNodeSetAttribute(v891, "player_nametag", "all|none,team,all");
-        xmlNodeSetAttribute(v891, "player_radarblip", "team|none,team,all");
-        xmlNodeSetAttribute(v891, "player_information", "true");
-        xmlNodeSetAttribute(v891, "player_start_armour", "0");
-        xmlNodeSetAttribute(v891, "player_start_health", "100");
-        xmlNodeSetAttribute(v891, "respawn", "false");
-        xmlNodeSetAttribute(v891, "respawn_lives", "0");
-        xmlNodeSetAttribute(v891, "respawn_time", "0:05");
-        xmlNodeSetAttribute(v891, "spectate_enemy", "false");
-        xmlNodeSetAttribute(v891, "stealth_killing", "true");
-        xmlNodeSetAttribute(v891, "streetlamps", "true");
-        xmlNodeSetAttribute(v891, "time", "12:00");
-        xmlNodeSetAttribute(v891, "time_locked", "false");
-        xmlNodeSetAttribute(v891, "time_minuteduration", "1000");
-        xmlNodeSetAttribute(v891, "timeout_to_pause", "false");
-        xmlNodeSetAttribute(v891, "vehicle_color", "teamcolor|default,teamcolor");
-        xmlNodeSetAttribute(v891, "vehicle_per_player", "2");
-        xmlNodeSetAttribute(v891, "vehicle_nametag", "true");
-        xmlNodeSetAttribute(v891, "vehicle_radarblip", "unoccupied|none,unoccupied,always");
-        xmlNodeSetAttribute(v891, "vehicle_respawn_blown", "0:00");
-        xmlNodeSetAttribute(v891, "vehicle_respawn_idle", "0:00");
-        xmlNodeSetAttribute(v891, "vehicle_tank_explodable", "false");
-        xmlNodeSetAttribute(v891, "vote", "true");
-        xmlNodeSetAttribute(v891, "vote_duration", "0:20");
-        v891 = xmlCreateChild(v889, "glitches");
-        xmlNodeSetAttribute(v891, "quickreload", "false");
-        xmlNodeSetAttribute(v891, "fastmove", "true");
-        xmlNodeSetAttribute(v891, "fastfire", "true");
-        xmlNodeSetAttribute(v891, "crouchbug", "true");
-        xmlNodeSetAttribute(v891, "fastsprint", "true");
-        xmlNodeSetAttribute(v891, "quickstand", "true");
-        v891 = xmlCreateChild(v889, "cheats");
-        xmlNodeSetAttribute(v891, "hovercars", "false");
-        xmlNodeSetAttribute(v891, "aircars", "false");
-        xmlNodeSetAttribute(v891, "extrabunny", "false");
-        xmlNodeSetAttribute(v891, "extrajump", "false");
-        xmlNodeSetAttribute(v891, "magnetcars", "false");
-        xmlNodeSetAttribute(v891, "knockoffbike", "true");
-        v891 = xmlCreateChild(v889, "limites");
-        xmlNodeSetAttribute(v891, "fps_limit", "50");
-        xmlNodeSetAttribute(v891, "fps_minimal", "0");
-        xmlNodeSetAttribute(v891, "ping_maximal", "65536");
-        xmlNodeSetAttribute(v891, "packetloss_second", "0");
-        xmlNodeSetAttribute(v891, "packetloss_total", "0");
-        xmlNodeSetAttribute(v891, "warnings_fps", "10");
-        xmlNodeSetAttribute(v891, "warnings_ping", "10");
-        xmlNodeSetAttribute(v891, "warnings_packetloss", "3");
-        local l_pairs_6 = pairs;
-        local v893 = getTacticsData("modes_defined") or {};
-        for v894 in l_pairs_6(v893) do
-            v891 = xmlCreateChild(v889, "mode");
-            xmlNodeSetAttribute(v891, "name", v894);
-            xmlNodeSetAttribute(v891, "enable", "true");
-            local l_pairs_7 = pairs;
-            local v896 = getTacticsData("modes_settings", v894) or {};
-            for v897, v898 in l_pairs_7(v896) do
-                xmlNodeSetAttribute(v891, v897, v898);
+        local defaultXML = xmlCreateFile("config/_default.xml", "config");
+        local sectionNode = xmlCreateChild(defaultXML, "teams");
+        local refereeConfigNode = xmlCreateChild(sectionNode, "referee");
+        xmlNodeSetAttribute(refereeConfigNode, "name", "Referee");
+        xmlNodeSetAttribute(refereeConfigNode, "color", "[255,255,255]");
+        local teamConfigNode = xmlCreateChild(sectionNode, "team");
+        xmlNodeSetAttribute(teamConfigNode, "name", "Team1");
+        xmlNodeSetAttribute(teamConfigNode, "skins", "[292]");
+        xmlNodeSetAttribute(teamConfigNode, "color", "[192,96,0]");
+        xmlNodeSetAttribute(teamConfigNode, "side", "1");
+        teamConfigNode = xmlCreateChild(sectionNode, "team");
+        xmlNodeSetAttribute(teamConfigNode, "name", "Team2");
+        xmlNodeSetAttribute(teamConfigNode, "skins", "[308]");
+        xmlNodeSetAttribute(teamConfigNode, "color", "[0,96,192]");
+        xmlNodeSetAttribute(teamConfigNode, "side", "2");
+        sectionNode = xmlCreateChild(defaultXML, "weaponpack");
+        xmlNodeSetAttribute(sectionNode, "slots", "3");
+        teamConfigNode = xmlCreateChild(sectionNode, "weapons");
+        xmlNodeSetAttribute(teamConfigNode, "silenced", "102");
+        xmlNodeSetAttribute(teamConfigNode, "deagle", "49");
+        xmlNodeSetAttribute(teamConfigNode, "shotgun", "80");
+        xmlNodeSetAttribute(teamConfigNode, "spas12", "49");
+        xmlNodeSetAttribute(teamConfigNode, "mp5", "210");
+        xmlNodeSetAttribute(teamConfigNode, "ak47", "300");
+        xmlNodeSetAttribute(teamConfigNode, "m4", "200");
+        xmlNodeSetAttribute(teamConfigNode, "rifle", "100");
+        xmlNodeSetAttribute(teamConfigNode, "sniper", "50");
+        xmlNodeSetAttribute(teamConfigNode, "grenade", "1");
+        xmlNodeSetAttribute(teamConfigNode, "teargas", "1");
+        xmlNodeSetAttribute(teamConfigNode, "molotov", "1");
+        xmlNodeSetAttribute(teamConfigNode, "knife", "1");
+        teamConfigNode = xmlCreateChild(sectionNode, "balance");
+        teamConfigNode = xmlCreateChild(sectionNode, "cost");
+        teamConfigNode = xmlCreateChild(sectionNode, "slot");
+        sectionNode = xmlCreateChild(defaultXML, "shooting");
+        teamConfigNode = xmlCreateChild(sectionNode, "properties");
+        xmlNodeSetAttribute(teamConfigNode, "weapon", "22");
+        xmlNodeSetAttribute(teamConfigNode, "maximum_clip_ammo", "17");
+        xmlNodeSetAttribute(teamConfigNode, "flags", "3303");
+        teamConfigNode = xmlCreateChild(sectionNode, "properties");
+        xmlNodeSetAttribute(teamConfigNode, "weapon", "26");
+        xmlNodeSetAttribute(teamConfigNode, "maximum_clip_ammo", "2");
+        xmlNodeSetAttribute(teamConfigNode, "flags", "3303");
+        teamConfigNode = xmlCreateChild(sectionNode, "properties");
+        xmlNodeSetAttribute(teamConfigNode, "weapon", "28");
+        xmlNodeSetAttribute(teamConfigNode, "maximum_clip_ammo", "50");
+        xmlNodeSetAttribute(teamConfigNode, "flags", "3303");
+        teamConfigNode = xmlCreateChild(sectionNode, "properties");
+        xmlNodeSetAttribute(teamConfigNode, "weapon", "30");
+        xmlNodeSetAttribute(teamConfigNode, "damage", "12");
+        teamConfigNode = xmlCreateChild(sectionNode, "properties");
+        xmlNodeSetAttribute(teamConfigNode, "weapon", "32");
+        xmlNodeSetAttribute(teamConfigNode, "maximum_clip_ammo", "50");
+        xmlNodeSetAttribute(teamConfigNode, "flags", "3303");
+        teamConfigNode = xmlCreateChild(sectionNode, "properties");
+        xmlNodeSetAttribute(teamConfigNode, "weapon", "33");
+        xmlNodeSetAttribute(teamConfigNode, "flags", "830A");
+        sectionNode = xmlCreateChild(defaultXML, "handlings");
+        sectionNode = xmlCreateChild(defaultXML, "settings");
+        teamConfigNode = xmlCreateChild(sectionNode, "settings");
+        xmlNodeSetAttribute(teamConfigNode, "autobalance", "false");
+        xmlNodeSetAttribute(teamConfigNode, "autoswap", "true");
+        xmlNodeSetAttribute(teamConfigNode, "blurlevel", "0");
+        xmlNodeSetAttribute(teamConfigNode, "countdown_auto", "true");
+        xmlNodeSetAttribute(teamConfigNode, "countdown_force", "0:10");
+        xmlNodeSetAttribute(teamConfigNode, "countdown_start", "3");
+        xmlNodeSetAttribute(teamConfigNode, "dontfire", "false");
+        xmlNodeSetAttribute(teamConfigNode, "friendly_fire", "false");
+        xmlNodeSetAttribute(teamConfigNode, "gamespeed", "1.0");
+        xmlNodeSetAttribute(teamConfigNode, "ghostmode", "none|none,team,all");
+        xmlNodeSetAttribute(teamConfigNode, "gravity", "0.008");
+        xmlNodeSetAttribute(teamConfigNode, "heli_killing", "true");
+        xmlNodeSetAttribute(teamConfigNode, "player_can_driveby", "true");
+        xmlNodeSetAttribute(teamConfigNode, "player_dead_visible", "true");
+        xmlNodeSetAttribute(teamConfigNode, "player_nametag", "all|none,team,all");
+        xmlNodeSetAttribute(teamConfigNode, "player_radarblip", "team|none,team,all");
+        xmlNodeSetAttribute(teamConfigNode, "player_information", "true");
+        xmlNodeSetAttribute(teamConfigNode, "player_start_armour", "0");
+        xmlNodeSetAttribute(teamConfigNode, "player_start_health", "100");
+        xmlNodeSetAttribute(teamConfigNode, "respawn", "false");
+        xmlNodeSetAttribute(teamConfigNode, "respawn_lives", "0");
+        xmlNodeSetAttribute(teamConfigNode, "respawn_time", "0:05");
+        xmlNodeSetAttribute(teamConfigNode, "spectate_enemy", "false");
+        xmlNodeSetAttribute(teamConfigNode, "stealth_killing", "true");
+        xmlNodeSetAttribute(teamConfigNode, "streetlamps", "true");
+        xmlNodeSetAttribute(teamConfigNode, "time", "12:00");
+        xmlNodeSetAttribute(teamConfigNode, "time_locked", "false");
+        xmlNodeSetAttribute(teamConfigNode, "time_minuteduration", "1000");
+        xmlNodeSetAttribute(teamConfigNode, "timeout_to_pause", "false");
+        xmlNodeSetAttribute(teamConfigNode, "vehicle_color", "teamcolor|default,teamcolor");
+        xmlNodeSetAttribute(teamConfigNode, "vehicle_per_player", "2");
+        xmlNodeSetAttribute(teamConfigNode, "vehicle_nametag", "true");
+        xmlNodeSetAttribute(teamConfigNode, "vehicle_radarblip", "unoccupied|none,unoccupied,always");
+        xmlNodeSetAttribute(teamConfigNode, "vehicle_respawn_blown", "0:00");
+        xmlNodeSetAttribute(teamConfigNode, "vehicle_respawn_idle", "0:00");
+        xmlNodeSetAttribute(teamConfigNode, "vehicle_tank_explodable", "false");
+        xmlNodeSetAttribute(teamConfigNode, "vote", "true");
+        xmlNodeSetAttribute(teamConfigNode, "vote_duration", "0:20");
+        teamConfigNode = xmlCreateChild(sectionNode, "glitches");
+        xmlNodeSetAttribute(teamConfigNode, "quickreload", "false");
+        xmlNodeSetAttribute(teamConfigNode, "fastmove", "true");
+        xmlNodeSetAttribute(teamConfigNode, "fastfire", "true");
+        xmlNodeSetAttribute(teamConfigNode, "crouchbug", "true");
+        xmlNodeSetAttribute(teamConfigNode, "fastsprint", "true");
+        xmlNodeSetAttribute(teamConfigNode, "quickstand", "true");
+        teamConfigNode = xmlCreateChild(sectionNode, "cheats");
+        xmlNodeSetAttribute(teamConfigNode, "hovercars", "false");
+        xmlNodeSetAttribute(teamConfigNode, "aircars", "false");
+        xmlNodeSetAttribute(teamConfigNode, "extrabunny", "false");
+        xmlNodeSetAttribute(teamConfigNode, "extrajump", "false");
+        xmlNodeSetAttribute(teamConfigNode, "magnetcars", "false");
+        xmlNodeSetAttribute(teamConfigNode, "knockoffbike", "true");
+        teamConfigNode = xmlCreateChild(sectionNode, "limites");
+        xmlNodeSetAttribute(teamConfigNode, "fps_limit", "50");
+        xmlNodeSetAttribute(teamConfigNode, "fps_minimal", "0");
+        xmlNodeSetAttribute(teamConfigNode, "ping_maximal", "65536");
+        xmlNodeSetAttribute(teamConfigNode, "packetloss_second", "0");
+        xmlNodeSetAttribute(teamConfigNode, "packetloss_total", "0");
+        xmlNodeSetAttribute(teamConfigNode, "warnings_fps", "10");
+        xmlNodeSetAttribute(teamConfigNode, "warnings_ping", "10");
+        xmlNodeSetAttribute(teamConfigNode, "warnings_packetloss", "3");
+        local pairsFunc6 = pairs;
+        local definedModesTable = getTacticsData("modes_defined") or {};
+        for modeKey2 in pairsFunc6(definedModesTable) do
+            teamConfigNode = xmlCreateChild(sectionNode, "mode");
+            xmlNodeSetAttribute(teamConfigNode, "name", modeKey2);
+            xmlNodeSetAttribute(teamConfigNode, "enable", "true");
+            local pairsFunc7 = pairs;
+            local modeSettingsData = getTacticsData("modes_settings", modeKey2) or {};
+            for modeSettingKey2, modeSettingValue2 in pairsFunc7(modeSettingsData) do
+                xmlNodeSetAttribute(teamConfigNode, modeSettingKey2, modeSettingValue2);
             end;
         end;
-        v889 = xmlCreateChild(v888, "mappack");
-        xmlNodeSetAttribute(v889, "automatics", "lobby|lobby,cycler,voting,random");
-        v891 = xmlCreateChild(v889, "cycler");
-        xmlNodeSetAttribute(v891, "resnames", "[]");
-        v891 = xmlCreateChild(v889, "disabled");
-        xmlNodeSetAttribute(v891, "resnames", "[]");
-        v889 = xmlCreateChild(v888, "vehiclepack");
-        xmlNodeSetAttribute(v889, "models", "[407,425,430,432,435,441,447,449,450,464,465,476,501,520,584,591,601,537,538,564,569,570,590,594,606,607,610,608,611]");
-        v889 = xmlCreateChild(v888, "weather");
-        v891 = xmlCreateChild(v889, "weather");
-        xmlNodeSetAttribute(v891, "hour", "0");
-        xmlNodeSetAttribute(v891, "sky", "[0,23,24,0,31,32]");
-        xmlNodeSetAttribute(v891, "clouds", "true");
-        xmlNodeSetAttribute(v891, "birds", "false");
-        xmlNodeSetAttribute(v891, "sun", "[255,128,0,5,0,0,0.00]");
-        xmlNodeSetAttribute(v891, "water", "[85,85,65,240]");
-        xmlNodeSetAttribute(v891, "wave", "0.5");
-        xmlNodeSetAttribute(v891, "level", "0");
-        xmlNodeSetAttribute(v891, "wind", "[0.16,0.15,0.00]");
-        xmlNodeSetAttribute(v891, "rain", "0");
-        xmlNodeSetAttribute(v891, "heat", "0");
-        xmlNodeSetAttribute(v891, "far", "400.00");
-        xmlNodeSetAttribute(v891, "fog", "100.00");
-        xmlNodeSetAttribute(v891, "effect", "0");
-        v891 = xmlCreateChild(v889, "weather");
-        xmlNodeSetAttribute(v891, "hour", "5");
-        xmlNodeSetAttribute(v891, "sky", "[0,20,20,0,31,32]");
-        xmlNodeSetAttribute(v891, "clouds", "true");
-        xmlNodeSetAttribute(v891, "birds", "true");
-        xmlNodeSetAttribute(v891, "sun", "[255,128,0,255,128,0,0.00]");
-        xmlNodeSetAttribute(v891, "water", "[53,104,104,240]");
-        xmlNodeSetAttribute(v891, "wave", "0.5");
-        xmlNodeSetAttribute(v891, "level", "0");
-        xmlNodeSetAttribute(v891, "wind", "[0.16,0.15,0.00]");
-        xmlNodeSetAttribute(v891, "rain", "0");
-        xmlNodeSetAttribute(v891, "heat", "0");
-        xmlNodeSetAttribute(v891, "far", "400.00");
-        xmlNodeSetAttribute(v891, "fog", "100.00");
-        xmlNodeSetAttribute(v891, "effect", "0");
-        v891 = xmlCreateChild(v889, "weather");
-        xmlNodeSetAttribute(v891, "hour", "6");
-        xmlNodeSetAttribute(v891, "sky", "[90,205,255,200,144,85]");
-        xmlNodeSetAttribute(v891, "clouds", "true");
-        xmlNodeSetAttribute(v891, "birds", "true");
-        xmlNodeSetAttribute(v891, "sun", "[255,128,0,255,128,0,8.40]");
-        xmlNodeSetAttribute(v891, "water", "[90,170,170,240]");
-        xmlNodeSetAttribute(v891, "wave", "0.5");
-        xmlNodeSetAttribute(v891, "level", "0");
-        xmlNodeSetAttribute(v891, "wind", "[0.16,0.15,0.00]");
-        xmlNodeSetAttribute(v891, "rain", "0");
-        xmlNodeSetAttribute(v891, "heat", "0");
-        xmlNodeSetAttribute(v891, "far", "800.00");
-        xmlNodeSetAttribute(v891, "fog", "100.00");
-        xmlNodeSetAttribute(v891, "effect", "0");
-        v891 = xmlCreateChild(v889, "weather");
-        xmlNodeSetAttribute(v891, "hour", "7");
-        xmlNodeSetAttribute(v891, "sky", "[90,205,255,90,200,255]");
-        xmlNodeSetAttribute(v891, "clouds", "true");
-        xmlNodeSetAttribute(v891, "birds", "true");
-        xmlNodeSetAttribute(v891, "sun", "[255,255,255,255,255,255,2.20]");
-        xmlNodeSetAttribute(v891, "water", "[145,170,170,240]");
-        xmlNodeSetAttribute(v891, "wave", "0.5");
-        xmlNodeSetAttribute(v891, "level", "0");
-        xmlNodeSetAttribute(v891, "wind", "[0.16,0.15,0.00]");
-        xmlNodeSetAttribute(v891, "rain", "0");
-        xmlNodeSetAttribute(v891, "heat", "0");
-        xmlNodeSetAttribute(v891, "far", "800.00");
-        xmlNodeSetAttribute(v891, "fog", "100.00");
-        xmlNodeSetAttribute(v891, "effect", "0");
-        v891 = xmlCreateChild(v889, "weather");
-        xmlNodeSetAttribute(v891, "hour", "12");
-        xmlNodeSetAttribute(v891, "sky", "[68,117,210,36,117,199]");
-        xmlNodeSetAttribute(v891, "clouds", "true");
-        xmlNodeSetAttribute(v891, "birds", "true");
-        xmlNodeSetAttribute(v891, "sun", "[255,255,255,255,255,255,1.10]");
-        xmlNodeSetAttribute(v891, "water", "[90,170,170,240]");
-        xmlNodeSetAttribute(v891, "wave", "0.5");
-        xmlNodeSetAttribute(v891, "level", "0");
-        xmlNodeSetAttribute(v891, "wind", "[0.16,0.15,0.00]");
-        xmlNodeSetAttribute(v891, "rain", "0");
-        xmlNodeSetAttribute(v891, "heat", "0");
-        xmlNodeSetAttribute(v891, "far", "800.00");
-        xmlNodeSetAttribute(v891, "fog", "10.00");
-        xmlNodeSetAttribute(v891, "effect", "0");
-        v891 = xmlCreateChild(v889, "weather");
-        xmlNodeSetAttribute(v891, "hour", "19");
-        xmlNodeSetAttribute(v891, "sky", "[68,117,210,36,117,194]");
-        xmlNodeSetAttribute(v891, "clouds", "true");
-        xmlNodeSetAttribute(v891, "birds", "true");
-        xmlNodeSetAttribute(v891, "sun", "[222,88,0,122,55,0,3.90]");
-        xmlNodeSetAttribute(v891, "water", "[50,97,97,240]");
-        xmlNodeSetAttribute(v891, "wave", "0.5");
-        xmlNodeSetAttribute(v891, "level", "0");
-        xmlNodeSetAttribute(v891, "wind", "[0.16,0.15,0.00]");
-        xmlNodeSetAttribute(v891, "rain", "0");
-        xmlNodeSetAttribute(v891, "heat", "0");
-        xmlNodeSetAttribute(v891, "far", "800.00");
-        xmlNodeSetAttribute(v891, "fog", "10.00");
-        xmlNodeSetAttribute(v891, "effect", "0");
-        v891 = xmlCreateChild(v889, "weather");
-        xmlNodeSetAttribute(v891, "hour", "20");
-        xmlNodeSetAttribute(v891, "sky", "[181,150,84,167,108,65]");
-        xmlNodeSetAttribute(v891, "clouds", "true");
-        xmlNodeSetAttribute(v891, "birds", "true");
-        xmlNodeSetAttribute(v891, "sun", "[255,128,0,255,128,0,2.00]");
-        xmlNodeSetAttribute(v891, "water", "[67,67,67,240]");
-        xmlNodeSetAttribute(v891, "wave", "0.5");
-        xmlNodeSetAttribute(v891, "level", "0");
-        xmlNodeSetAttribute(v891, "wind", "[0.16,0.15,0.00]");
-        xmlNodeSetAttribute(v891, "rain", "0");
-        xmlNodeSetAttribute(v891, "heat", "0");
-        xmlNodeSetAttribute(v891, "far", "800.00");
-        xmlNodeSetAttribute(v891, "fog", "10.00");
-        xmlNodeSetAttribute(v891, "effect", "0");
-        v891 = xmlCreateChild(v889, "weather");
-        xmlNodeSetAttribute(v891, "hour", "22");
-        xmlNodeSetAttribute(v891, "sky", "[137,100,84,60,50,52]");
-        xmlNodeSetAttribute(v891, "clouds", "true");
-        xmlNodeSetAttribute(v891, "birds", "true");
-        xmlNodeSetAttribute(v891, "sun", "[255,128,0,5,8,0,1.00]");
-        xmlNodeSetAttribute(v891, "water", "[67,67,62,240]");
-        xmlNodeSetAttribute(v891, "wave", "0.5");
-        xmlNodeSetAttribute(v891, "level", "0");
-        xmlNodeSetAttribute(v891, "wind", "[0.16,0.15,0.00]");
-        xmlNodeSetAttribute(v891, "rain", "0");
-        xmlNodeSetAttribute(v891, "heat", "0");
-        xmlNodeSetAttribute(v891, "far", "800.00");
-        xmlNodeSetAttribute(v891, "fog", "10.00");
-        xmlNodeSetAttribute(v891, "effect", "0");
-        v889 = xmlCreateChild(v888, "anticheat");
-        xmlNodeSetAttribute(v889, "action_detection", "chat|chat,adminchat,kick");
-        v891 = xmlCreateChild(v889, "speedhach");
-        xmlNodeSetAttribute(v891, "enable", "true");
-        v891 = xmlCreateChild(v889, "godmode");
-        xmlNodeSetAttribute(v891, "enable", "true");
-        v891 = xmlCreateChild(v889, "mods");
-        xmlNodeSetAttribute(v891, "enable", "true");
-        node3 = xmlCreateChild(v891, "mod");
-        xmlNodeSetAttribute(node3, "name", "Animations");
-        xmlNodeSetAttribute(node3, "search", "*.ifp");
-        xmlNodeSetAttribute(node3, "type", "name");
-        node3 = xmlCreateChild(v891, "mod");
-        xmlNodeSetAttribute(node3, "name", "Collisions");
-        xmlNodeSetAttribute(node3, "search", "*.col");
-        xmlNodeSetAttribute(node3, "type", "name");
-        xmlSaveFile(v888);
-        xmlUnloadFile(v888);
-        startConfig("_default", v885);
+        sectionNode = xmlCreateChild(defaultXML, "mappack");
+        xmlNodeSetAttribute(sectionNode, "automatics", "lobby|lobby,cycler,voting,random");
+        teamConfigNode = xmlCreateChild(sectionNode, "cycler");
+        xmlNodeSetAttribute(teamConfigNode, "resnames", "[]");
+        teamConfigNode = xmlCreateChild(sectionNode, "disabled");
+        xmlNodeSetAttribute(teamConfigNode, "resnames", "[]");
+        sectionNode = xmlCreateChild(defaultXML, "vehiclepack");
+        xmlNodeSetAttribute(sectionNode, "models", "[407,425,430,432,435,441,447,449,450,464,465,476,501,520,584,591,601,537,538,564,569,570,590,594,606,607,610,608,611]");
+        sectionNode = xmlCreateChild(defaultXML, "weather");
+        teamConfigNode = xmlCreateChild(sectionNode, "weather");
+        xmlNodeSetAttribute(teamConfigNode, "hour", "0");
+        xmlNodeSetAttribute(teamConfigNode, "sky", "[0,23,24,0,31,32]");
+        xmlNodeSetAttribute(teamConfigNode, "clouds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "birds", "false");
+        xmlNodeSetAttribute(teamConfigNode, "sun", "[255,128,0,5,0,0,0.00]");
+        xmlNodeSetAttribute(teamConfigNode, "water", "[85,85,65,240]");
+        xmlNodeSetAttribute(teamConfigNode, "wave", "0.5");
+        xmlNodeSetAttribute(teamConfigNode, "level", "0");
+        xmlNodeSetAttribute(teamConfigNode, "wind", "[0.16,0.15,0.00]");
+        xmlNodeSetAttribute(teamConfigNode, "rain", "0");
+        xmlNodeSetAttribute(teamConfigNode, "heat", "0");
+        xmlNodeSetAttribute(teamConfigNode, "far", "400.00");
+        xmlNodeSetAttribute(teamConfigNode, "fog", "100.00");
+        xmlNodeSetAttribute(teamConfigNode, "effect", "0");
+        teamConfigNode = xmlCreateChild(sectionNode, "weather");
+        xmlNodeSetAttribute(teamConfigNode, "hour", "5");
+        xmlNodeSetAttribute(teamConfigNode, "sky", "[0,20,20,0,31,32]");
+        xmlNodeSetAttribute(teamConfigNode, "clouds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "birds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "sun", "[255,128,0,255,128,0,0.00]");
+        xmlNodeSetAttribute(teamConfigNode, "water", "[53,104,104,240]");
+        xmlNodeSetAttribute(teamConfigNode, "wave", "0.5");
+        xmlNodeSetAttribute(teamConfigNode, "level", "0");
+        xmlNodeSetAttribute(teamConfigNode, "wind", "[0.16,0.15,0.00]");
+        xmlNodeSetAttribute(teamConfigNode, "rain", "0");
+        xmlNodeSetAttribute(teamConfigNode, "heat", "0");
+        xmlNodeSetAttribute(teamConfigNode, "far", "400.00");
+        xmlNodeSetAttribute(teamConfigNode, "fog", "100.00");
+        xmlNodeSetAttribute(teamConfigNode, "effect", "0");
+        teamConfigNode = xmlCreateChild(sectionNode, "weather");
+        xmlNodeSetAttribute(teamConfigNode, "hour", "6");
+        xmlNodeSetAttribute(teamConfigNode, "sky", "[90,205,255,200,144,85]");
+        xmlNodeSetAttribute(teamConfigNode, "clouds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "birds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "sun", "[255,128,0,255,128,0,8.40]");
+        xmlNodeSetAttribute(teamConfigNode, "water", "[90,170,170,240]");
+        xmlNodeSetAttribute(teamConfigNode, "wave", "0.5");
+        xmlNodeSetAttribute(teamConfigNode, "level", "0");
+        xmlNodeSetAttribute(teamConfigNode, "wind", "[0.16,0.15,0.00]");
+        xmlNodeSetAttribute(teamConfigNode, "rain", "0");
+        xmlNodeSetAttribute(teamConfigNode, "heat", "0");
+        xmlNodeSetAttribute(teamConfigNode, "far", "800.00");
+        xmlNodeSetAttribute(teamConfigNode, "fog", "100.00");
+        xmlNodeSetAttribute(teamConfigNode, "effect", "0");
+        teamConfigNode = xmlCreateChild(sectionNode, "weather");
+        xmlNodeSetAttribute(teamConfigNode, "hour", "7");
+        xmlNodeSetAttribute(teamConfigNode, "sky", "[90,205,255,90,200,255]");
+        xmlNodeSetAttribute(teamConfigNode, "clouds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "birds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "sun", "[255,255,255,255,255,255,2.20]");
+        xmlNodeSetAttribute(teamConfigNode, "water", "[145,170,170,240]");
+        xmlNodeSetAttribute(teamConfigNode, "wave", "0.5");
+        xmlNodeSetAttribute(teamConfigNode, "level", "0");
+        xmlNodeSetAttribute(teamConfigNode, "wind", "[0.16,0.15,0.00]");
+        xmlNodeSetAttribute(teamConfigNode, "rain", "0");
+        xmlNodeSetAttribute(teamConfigNode, "heat", "0");
+        xmlNodeSetAttribute(teamConfigNode, "far", "800.00");
+        xmlNodeSetAttribute(teamConfigNode, "fog", "100.00");
+        xmlNodeSetAttribute(teamConfigNode, "effect", "0");
+        teamConfigNode = xmlCreateChild(sectionNode, "weather");
+        xmlNodeSetAttribute(teamConfigNode, "hour", "12");
+        xmlNodeSetAttribute(teamConfigNode, "sky", "[68,117,210,36,117,199]");
+        xmlNodeSetAttribute(teamConfigNode, "clouds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "birds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "sun", "[255,255,255,255,255,255,1.10]");
+        xmlNodeSetAttribute(teamConfigNode, "water", "[90,170,170,240]");
+        xmlNodeSetAttribute(teamConfigNode, "wave", "0.5");
+        xmlNodeSetAttribute(teamConfigNode, "level", "0");
+        xmlNodeSetAttribute(teamConfigNode, "wind", "[0.16,0.15,0.00]");
+        xmlNodeSetAttribute(teamConfigNode, "rain", "0");
+        xmlNodeSetAttribute(teamConfigNode, "heat", "0");
+        xmlNodeSetAttribute(teamConfigNode, "far", "800.00");
+        xmlNodeSetAttribute(teamConfigNode, "fog", "10.00");
+        xmlNodeSetAttribute(teamConfigNode, "effect", "0");
+        teamConfigNode = xmlCreateChild(sectionNode, "weather");
+        xmlNodeSetAttribute(teamConfigNode, "hour", "19");
+        xmlNodeSetAttribute(teamConfigNode, "sky", "[68,117,210,36,117,194]");
+        xmlNodeSetAttribute(teamConfigNode, "clouds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "birds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "sun", "[222,88,0,122,55,0,3.90]");
+        xmlNodeSetAttribute(teamConfigNode, "water", "[50,97,97,240]");
+        xmlNodeSetAttribute(teamConfigNode, "wave", "0.5");
+        xmlNodeSetAttribute(teamConfigNode, "level", "0");
+        xmlNodeSetAttribute(teamConfigNode, "wind", "[0.16,0.15,0.00]");
+        xmlNodeSetAttribute(teamConfigNode, "rain", "0");
+        xmlNodeSetAttribute(teamConfigNode, "heat", "0");
+        xmlNodeSetAttribute(teamConfigNode, "far", "800.00");
+        xmlNodeSetAttribute(teamConfigNode, "fog", "10.00");
+        xmlNodeSetAttribute(teamConfigNode, "effect", "0");
+        teamConfigNode = xmlCreateChild(sectionNode, "weather");
+        xmlNodeSetAttribute(teamConfigNode, "hour", "20");
+        xmlNodeSetAttribute(teamConfigNode, "sky", "[181,150,84,167,108,65]");
+        xmlNodeSetAttribute(teamConfigNode, "clouds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "birds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "sun", "[255,128,0,255,128,0,2.00]");
+        xmlNodeSetAttribute(teamConfigNode, "water", "[67,67,67,240]");
+        xmlNodeSetAttribute(teamConfigNode, "wave", "0.5");
+        xmlNodeSetAttribute(teamConfigNode, "level", "0");
+        xmlNodeSetAttribute(teamConfigNode, "wind", "[0.16,0.15,0.00]");
+        xmlNodeSetAttribute(teamConfigNode, "rain", "0");
+        xmlNodeSetAttribute(teamConfigNode, "heat", "0");
+        xmlNodeSetAttribute(teamConfigNode, "far", "800.00");
+        xmlNodeSetAttribute(teamConfigNode, "fog", "10.00");
+        xmlNodeSetAttribute(teamConfigNode, "effect", "0");
+        teamConfigNode = xmlCreateChild(sectionNode, "weather");
+        xmlNodeSetAttribute(teamConfigNode, "hour", "22");
+        xmlNodeSetAttribute(teamConfigNode, "sky", "[137,100,84,60,50,52]");
+        xmlNodeSetAttribute(teamConfigNode, "clouds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "birds", "true");
+        xmlNodeSetAttribute(teamConfigNode, "sun", "[255,128,0,5,8,0,1.00]");
+        xmlNodeSetAttribute(teamConfigNode, "water", "[67,67,62,240]");
+        xmlNodeSetAttribute(teamConfigNode, "wave", "0.5");
+        xmlNodeSetAttribute(teamConfigNode, "level", "0");
+        xmlNodeSetAttribute(teamConfigNode, "wind", "[0.16,0.15,0.00]");
+        xmlNodeSetAttribute(teamConfigNode, "rain", "0");
+        xmlNodeSetAttribute(teamConfigNode, "heat", "0");
+        xmlNodeSetAttribute(teamConfigNode, "far", "800.00");
+        xmlNodeSetAttribute(teamConfigNode, "fog", "10.00");
+        xmlNodeSetAttribute(teamConfigNode, "effect", "0");
+        sectionNode = xmlCreateChild(defaultXML, "anticheat");
+        xmlNodeSetAttribute(sectionNode, "action_detection", "chat|chat,adminchat,kick");
+        teamConfigNode = xmlCreateChild(sectionNode, "speedhach");
+        xmlNodeSetAttribute(teamConfigNode, "enable", "true");
+        teamConfigNode = xmlCreateChild(sectionNode, "godmode");
+        xmlNodeSetAttribute(teamConfigNode, "enable", "true");
+        teamConfigNode = xmlCreateChild(sectionNode, "mods");
+        xmlNodeSetAttribute(teamConfigNode, "enable", "true");
+        modChildNode = xmlCreateChild(teamConfigNode, "mod");
+        xmlNodeSetAttribute(modChildNode, "name", "Animations");
+        xmlNodeSetAttribute(modChildNode, "search", "*.ifp");
+        xmlNodeSetAttribute(modChildNode, "type", "name");
+        modChildNode = xmlCreateChild(teamConfigNode, "mod");
+        xmlNodeSetAttribute(modChildNode, "name", "Collisions");
+        xmlNodeSetAttribute(modChildNode, "search", "*.col");
+        xmlNodeSetAttribute(modChildNode, "type", "name");
+        xmlSaveFile(defaultXML);
+        xmlUnloadFile(defaultXML);
+        startConfig("_default", isFirstLoad);
     end;
-    refreshConfiglist = function(v899) --[[ Line: 1128 ]]
-        local v900 = {};
-        local v901 = nil;
-        local v902 = nil;
-        local v903 = nil;
-        local v904 = nil;
-        v901 = xmlLoadFile("config/configs.xml");
-        for _, v906 in ipairs(xmlNodeGetChildren(v901)) do
-            if xmlNodeGetName(v906) == "current" then
-                v902 = xmlNodeGetAttribute(v906, "src");
-                v904 = v906;
+    refreshConfiglist = function(targetPlayer2) 
+        local configsData = {};
+        local configsXML7 = nil;
+        local currentConfigSrc = nil;
+        local configSrc = nil;
+        local currentNode = nil;
+        configsXML7 = xmlLoadFile("config/configs.xml");
+        for _, configNode7 in ipairs(xmlNodeGetChildren(configsXML7)) do
+            if xmlNodeGetName(configNode7) == "current" then
+                currentConfigSrc = xmlNodeGetAttribute(configNode7, "src");
+                currentNode = configNode7;
             end;
-            if xmlNodeGetName(v906) == "config" then
-                v903 = xmlNodeGetAttribute(v906, "src");
-                if not fileExists("config/" .. v903 .. ".xml") then
-                    xmlDestroyNode(v906);
-                    if v903 == v902 then
-                        xmlNodeSetAttribute(v904, "src", "_default");
+            if xmlNodeGetName(configNode7) == "config" then
+                configSrc = xmlNodeGetAttribute(configNode7, "src");
+                if not fileExists("config/" .. configSrc .. ".xml") then
+                    xmlDestroyNode(configNode7);
+                    if configSrc == currentConfigSrc then
+                        xmlNodeSetAttribute(currentNode, "src", "_default");
                     end;
                 else
-                    local v907 = "";
-                    local v908 = xmlLoadFile("config/" .. v903 .. ".xml");
-                    if xmlFindChild(v908, "mappack", 0) then
-                        v907 = v907 .. "M ";
+                    local configFlags = "";
+                    local configFileXML = xmlLoadFile("config/" .. configSrc .. ".xml");
+                    if xmlFindChild(configFileXML, "mappack", 0) then
+                        configFlags = configFlags .. "M ";
                     end;
-                    if xmlFindChild(v908, "settings", 0) then
-                        v907 = v907 .. "S ";
+                    if xmlFindChild(configFileXML, "settings", 0) then
+                        configFlags = configFlags .. "S ";
                     end;
-                    if xmlFindChild(v908, "teams", 0) then
-                        v907 = v907 .. "T ";
+                    if xmlFindChild(configFileXML, "teams", 0) then
+                        configFlags = configFlags .. "T ";
                     end;
-                    if xmlFindChild(v908, "weaponpack", 0) then
-                        v907 = v907 .. "Wp ";
+                    if xmlFindChild(configFileXML, "weaponpack", 0) then
+                        configFlags = configFlags .. "Wp ";
                     end;
-                    if xmlFindChild(v908, "vehiclepack", 0) then
-                        v907 = v907 .. "V ";
+                    if xmlFindChild(configFileXML, "vehiclepack", 0) then
+                        configFlags = configFlags .. "V ";
                     end;
-                    if xmlFindChild(v908, "weather", 0) then
-                        v907 = v907 .. "Wh ";
+                    if xmlFindChild(configFileXML, "weather", 0) then
+                        configFlags = configFlags .. "Wh ";
                     end;
-                    if xmlFindChild(v908, "shooting", 0) then
-                        v907 = v907 .. "Sh ";
+                    if xmlFindChild(configFileXML, "shooting", 0) then
+                        configFlags = configFlags .. "Sh ";
                     end;
-                    if xmlFindChild(v908, "handlings", 0) then
-                        v907 = v907 .. "H ";
+                    if xmlFindChild(configFileXML, "handlings", 0) then
+                        configFlags = configFlags .. "H ";
                     end;
-                    if xmlFindChild(v908, "anticheat", 0) then
-                        v907 = v907 .. "AC ";
+                    if xmlFindChild(configFileXML, "anticheat", 0) then
+                        configFlags = configFlags .. "AC ";
                     end;
-                    xmlUnloadFile(v908);
-                    if v903 == v902 then
-                        table.insert(v900, {
-                            v903, 
+                    xmlUnloadFile(configFileXML);
+                    if configSrc == currentConfigSrc then
+                        table.insert(configsData, {
+                            configSrc, 
                             0, 
-                            v907
+                            configFlags
                         });
                     else
-                        table.insert(v900, {
-                            v903, 
+                        table.insert(configsData, {
+                            configSrc, 
                             255, 
-                            v907
+                            configFlags
                         });
                     end;
                 end;
             end;
         end;
-        xmlSaveFile(v901);
-        xmlUnloadFile(v901);
-        callClientFunction(v899, "refreshConfiglist", v900);
+        xmlSaveFile(configsXML7);
+        xmlUnloadFile(configsXML7);
+        callClientFunction(targetPlayer2, "refreshConfiglist", configsData);
     end;
-    onPlayerJoin = function() --[[ Line: 1167 ]]
+    onPlayerJoin = function() 
         setElementData(source, "IP", hasObjectPermissionTo(getThisResource(), "function.getClientIP", false) and getPlayerIP(source) or "Not Permission");
         setElementData(source, "Serial", getPlayerSerial(source));
         setElementData(source, "Version", getPlayerVersion(source));
     end;
-    onRoundCommandStart = function(v909, v910, v911) --[[ Line: 1172 ]]
-        if not hasObjectPermissionTo(v909, "general.tactics_maps", false) then
-            return outputLangString(v909, "you_have_not_permissions");
-        elseif not v911 then
-            return startMap(v910);
+    onRoundCommandStart = function(commandPlayer, modeCommand, mapNameParam) 
+        if not hasObjectPermissionTo(commandPlayer, "general.tactics_maps", false) then
+            return outputLangString(commandPlayer, "you_have_not_permissions");
+        elseif not mapNameParam then
+            return startMap(modeCommand);
         else
-            local v912 = getResourceFromName(string.lower(v910 .. "_" .. v911));
-            if v912 and getResourceInfo(v912, "type") == "map" then
-                startMap(v912);
+            local mapResource = getResourceFromName(string.lower(modeCommand .. "_" .. mapNameParam));
+            if mapResource and getResourceInfo(mapResource, "type") == "map" then
+                startMap(mapResource);
                 return true;
             else
                 return false;
             end;
         end;
     end;
-    onRoundStop = function(v913) --[[ Line: 1187 ]]
-        if not hasObjectPermissionTo(v913, "general.tactics_maps", false) then
-            outputLangString(v913, "you_have_not_permissions");
+    onRoundStop = function(stopPlayer) 
+        if not hasObjectPermissionTo(stopPlayer, "general.tactics_maps", false) then
+            outputLangString(stopPlayer, "you_have_not_permissions");
             return false;
         else
-            local v914 = getTacticsData("map_disabled") or {};
-            local v915 = {};
-            for _, v917 in ipairs(getResources()) do
-                if getResourceInfo(v917, "type") == "map" and string.find(getResourceName(v917), "lobby") == 1 and not v914[getResourceName(v917)] then
-                    table.insert(v915, v917);
+            local disabledMapsTable2 = getTacticsData("map_disabled") or {};
+            local lobbyMapsList = {};
+            for _, lobbyResource2 in ipairs(getResources()) do
+                if getResourceInfo(lobbyResource2, "type") == "map" and string.find(getResourceName(lobbyResource2), "lobby") == 1 and not disabledMapsTable2[getResourceName(lobbyResource2)] then
+                    table.insert(lobbyMapsList, lobbyResource2);
                 end;
             end;
-            if #v915 > 0 then
-                local v918 = v915[math.random(#v915)];
-                startMap(v918, "random");
+            if #lobbyMapsList > 0 then
+                local randomLobbyMap2 = lobbyMapsList[math.random(#lobbyMapsList)];
+                startMap(randomLobbyMap2, "random");
                 return true;
             else
                 return false;
             end;
         end;
     end;
-    createTacticsMode = function(v919, v920, v921) --[[ Line: 1206 ]]
-        setTacticsData(v921 or true, "modes_defined", tostring(v919));
-        addCommandHandler(tostring(v919), onRoundCommandStart, false, false);
-        setTacticsData(v920, "modes_settings", tostring(v919));
+    createTacticsMode = function(modeNameParam, modeSettingsParam, modeFunction) 
+        setTacticsData(modeFunction or true, "modes_defined", tostring(modeNameParam));
+        addCommandHandler(tostring(modeNameParam), onRoundCommandStart, false, false);
+        setTacticsData(modeSettingsParam, "modes_settings", tostring(modeNameParam));
     end;
-    addPlayer = function(v922, _, v924) --[[ Line: 1211 ]]
-        if not hasObjectPermissionTo(v922, "general.tactics_players", false) then
-            return outputLangString(v922, "you_have_not_permissions");
+    addPlayer = function(addPlayerAdmin, _, targetPlayerID) 
+        if not hasObjectPermissionTo(addPlayerAdmin, "general.tactics_players", false) then
+            return outputLangString(addPlayerAdmin, "you_have_not_permissions");
         elseif getRoundState() ~= "started" then
             return false;
         else
-            local v925 = getElementByID(tostring(v924));
-            if v925 then
-                if not getPlayerTeam(v925) then
-                    outputLangString(v922, "player_without_team");
-                elseif getPlayerTeam(v925) == getElementsByType("team")[1] then
-                    outputLangString(v922, "player_is_referee");
-                elseif getElementData(v925, "Loading") then
-                    outputLangString(v922, "player_do_not_loaded");
-                elseif getElementData(v925, "Status") == "Play" then
-                    outputLangString(v922, "player_play_already");
+            local targetPlayerElement = getElementByID(tostring(targetPlayerID));
+            if targetPlayerElement then
+                if not getPlayerTeam(targetPlayerElement) then
+                    outputLangString(addPlayerAdmin, "player_without_team");
+                elseif getPlayerTeam(targetPlayerElement) == getElementsByType("team")[1] then
+                    outputLangString(addPlayerAdmin, "player_is_referee");
+                elseif getElementData(targetPlayerElement, "Loading") then
+                    outputLangString(addPlayerAdmin, "player_do_not_loaded");
+                elseif getElementData(targetPlayerElement, "Status") == "Play" then
+                    outputLangString(addPlayerAdmin, "player_play_already");
                 else
-                    outputLangString(root, "add_to_round", getPlayerName(v925));
-                    triggerEvent("onPlayerRoundRespawn", v925);
+                    outputLangString(root, "add_to_round", getPlayerName(targetPlayerElement));
+                    triggerEvent("onPlayerRoundRespawn", targetPlayerElement);
                 end;
             end;
             return;
         end;
     end;
-    removePlayer = function(v926, _, v928) --[[ Line: 1232 ]]
-        if not hasObjectPermissionTo(v926, "general.tactics_players", false) then
-            return outputLangString(v926, "you_have_not_permissions");
+    removePlayer = function(removePlayerAdmin, _, removePlayerID) 
+        if not hasObjectPermissionTo(removePlayerAdmin, "general.tactics_players", false) then
+            return outputLangString(removePlayerAdmin, "you_have_not_permissions");
         elseif getRoundState() ~= "started" then
             return false;
         else
-            local v929 = getElementByID(tostring(v928));
-            if v929 then
-                if getElementData(v929, "Status") ~= "Play" then
-                    outputLangString(v926, "player_not_play_yet");
-                elseif triggerEvent("onPlayerRemoveFromRound", v929) == true then
-                    killPed(v929);
-                    outputLangString(root, "remove_from_round", getPlayerName(v929));
+            local removePlayerElement = getElementByID(tostring(removePlayerID));
+            if removePlayerElement then
+                if getElementData(removePlayerElement, "Status") ~= "Play" then
+                    outputLangString(removePlayerAdmin, "player_not_play_yet");
+                elseif triggerEvent("onPlayerRemoveFromRound", removePlayerElement) == true then
+                    killPed(removePlayerElement);
+                    outputLangString(root, "remove_from_round", getPlayerName(removePlayerElement));
                 end;
             end;
             return;
         end;
     end;
-    restorePlayer = function(v930, _, v932) --[[ Line: 1249 ]]
-        if not hasObjectPermissionTo(v930, "general.tactics_players", false) then
-            return outputLangString(v930, "you_have_not_permissions");
+    restorePlayer = function(restorePlayerAdmin, _, restorePlayerID) 
+        if not hasObjectPermissionTo(restorePlayerAdmin, "general.tactics_players", false) then
+            return outputLangString(restorePlayerAdmin, "you_have_not_permissions");
         elseif getRoundState() ~= "started" then
             return false;
         else
-            local v933 = getElementByID(tostring(v932));
-            if v933 then
-                callClientFunction(v930, "toRestoreChoise", v933);
+            local restorePlayerElement = getElementByID(tostring(restorePlayerID));
+            if restorePlayerElement then
+                callClientFunction(restorePlayerAdmin, "toRestoreChoise", restorePlayerElement);
             end;
             return;
         end;
     end;
-    resetStats = function(_) --[[ Line: 1259 ]]
-        for _, v936 in ipairs(getElementsByType("team")) do
-            setElementData(v936, "Score", 0);
+    resetStats = function(_) 
+        for _, teamToReset in ipairs(getElementsByType("team")) do
+            setElementData(teamToReset, "Score", 0);
         end;
-        for _, v938 in ipairs(getElementsByType("player")) do
-            setElementData(v938, "Kills", 0);
-            setElementData(v938, "Deaths", 0);
-            setElementData(v938, "Damage", 0);
+        for _, playerToReset in ipairs(getElementsByType("player")) do
+            setElementData(playerToReset, "Kills", 0);
+            setElementData(playerToReset, "Deaths", 0);
+            setElementData(playerToReset, "Damage", 0);
         end;
         outputLangString(root, "stats_cleaned");
     end;
-    setNextMap = function(v939) --[[ Line: 1270 ]]
-        local v940 = getResourceFromName(v939);
-        if v940 then
-            local v941 = string.sub(v939, 1, string.find(v939, "_") - 1);
-            if #v941 > 1 then
-                v941 = string.upper(string.sub(v941, 1, 1)) .. string.sub(v941, 2);
+    setNextMap = function(nextMapName) 
+        local nextMapResource = getResourceFromName(nextMapName);
+        if nextMapResource then
+            local nextMapMode = string.sub(nextMapName, 1, string.find(nextMapName, "_") - 1);
+            if #nextMapMode > 1 then
+                nextMapMode = string.upper(string.sub(nextMapMode, 1, 1)) .. string.sub(nextMapMode, 2);
             end;
-            local v942 = getResourceInfo(v940, "name");
-            if not v942 then
-                v942 = string.sub(string.gsub(v939, "_", " "), #v941 + 2);
-                if #v942 > 1 then
-                    v942 = string.upper(string.sub(v942, 1, 1)) .. string.sub(v942, 2);
+            local nextMapDisplayName = getResourceInfo(nextMapResource, "name");
+            if not nextMapDisplayName then
+                nextMapDisplayName = string.sub(string.gsub(nextMapName, "_", " "), #nextMapMode + 2);
+                if #nextMapDisplayName > 1 then
+                    nextMapDisplayName = string.upper(string.sub(nextMapDisplayName, 1, 1)) .. string.sub(nextMapDisplayName, 2);
                 end;
             end;
-            setTacticsData(v939, "ResourceNext");
+            setTacticsData(nextMapName, "ResourceNext");
             if getTacticsData("Map") == "lobby" then
-                startMap(v940);
+                startMap(nextMapResource);
             else
-                outputLangString(root, "map_set_next", v941 .. ": " .. v942);
+                outputLangString(root, "map_set_next", nextMapMode .. ": " .. nextMapDisplayName);
             end;
         else
             outputLangString(root, "voting_falied");
         end;
     end;
-    cancelNextMap = function() --[[ Line: 1292 ]]
+    cancelNextMap = function() 
         if not getTacticsData("ResourceNext") then
             return;
         else
@@ -3942,111 +3928,111 @@ end)();
             return;
         end;
     end;
-    balanceTeams = function(v943, v944, ...) --[[ Line: 1297 ]]
-        if v943 and not hasObjectPermissionTo(v943, "general.tactics_players", false) then
-            return outputLangString(v943, "you_have_not_permissions");
+    balanceTeams = function(balanceAdmin, balanceMode, ...) 
+        if balanceAdmin and not hasObjectPermissionTo(balanceAdmin, "general.tactics_players", false) then
+            return outputLangString(balanceAdmin, "you_have_not_permissions");
         else
-            local v945 = {
+            local balanceArgs = {
                 ...
             };
-            v944 = string.lower(tostring(v944));
-            if v944 == "lite" then
-                local v946 = 0;
-                local v947 = {};
-                for v948, v949 in ipairs(getElementsByType("team")) do
-                    if v948 > 1 then
-                        v946 = v946 + countPlayersInTeam(v949);
-                        table.insert(v947, {
-                            v949, 
-                            getPlayersInTeam(v949)
+            balanceMode = string.lower(tostring(balanceMode));
+            if balanceMode == "lite" then
+                local totalPlayers = 0;
+                local teamsWithPlayers = {};
+                for teamIndex2, teamElement4 in ipairs(getElementsByType("team")) do
+                    if teamIndex2 > 1 then
+                        totalPlayers = totalPlayers + countPlayersInTeam(teamElement4);
+                        table.insert(teamsWithPlayers, {
+                            teamElement4, 
+                            getPlayersInTeam(teamElement4)
                         });
                     end;
                 end;
-                if #v947 == 0 then
+                if #teamsWithPlayers == 0 then
                     return;
                 else
-                    local v950 = math.ceil(v946 / #v947);
-                    table.sort(v947, function(v951, v952) --[[ Line: 1315 ]]
-                        return #v951[2] > #v952[2];
+                    local targetTeamSize = math.ceil(totalPlayers / #teamsWithPlayers);
+                    table.sort(teamsWithPlayers, function(teamData1, teamData2) 
+                        return #teamData1[2] > #teamData2[2];
                     end);
-                    local v953 = {};
-                    for _, v955 in ipairs(v947) do
-                        local v956, v957 = unpack(v955);
-                        for v958 = math.min(#v957, v950), math.max(#v957, v950) do
-                            if v958 <= #v957 then
-                                table.insert(v953, v957[v958]);
+                    local playersToMove = {};
+                    for _, teamEntry in ipairs(teamsWithPlayers) do
+                        local teamElement5, teamPlayers = unpack(teamEntry);
+                        for playerCounter = math.min(#teamPlayers, targetTeamSize), math.max(#teamPlayers, targetTeamSize) do
+                            if playerCounter <= #teamPlayers then
+                                table.insert(playersToMove, teamPlayers[playerCounter]);
                             else
-                                local v959 = getElementData(v956, "Skins") or {
+                                local teamSkin = getElementData(teamElement5, "Skins") or {
                                     71
                                 };
-                                setPlayerTeam(v953[1], v956);
-                                setElementModel(v953[1], v959[1]);
-                                triggerClientEvent(root, "onClientPlayerBlipUpdate", v953[1]);
-                                table.remove(v953, 1);
+                                setPlayerTeam(playersToMove[1], teamElement5);
+                                setElementModel(playersToMove[1], teamSkin[1]);
+                                triggerClientEvent(root, "onClientPlayerBlipUpdate", playersToMove[1]);
+                                table.remove(playersToMove, 1);
                             end;
                         end;
                     end;
                     outputLangString(root, "team_balanced_mode", "Lite");
                 end;
-            elseif v944 == "select" then
-                local v960 = getElementsByType("team")[1];
-                local v961 = getTacticsData("Sides");
-                if #v961 < 2 then
+            elseif balanceMode == "select" then
+                local refereeTeam2 = getElementsByType("team")[1];
+                local sidesList2 = getTacticsData("Sides");
+                if #sidesList2 < 2 then
                     return;
                 else
-                    local v962 = {};
-                    local l_ipairs_1 = ipairs;
-                    local v964 = v945[1] or {};
-                    for _, v966 in l_ipairs_1(v964) do
-                        v962[v966] = true;
-                        local v967 = getElementData(v961[1], "Skins") or {
+                    local selectedPlayers = {};
+                    local ipairsFunc2 = ipairs;
+                    local playerArray = balanceArgs[1] or {};
+                    for _, selectedPlayer in ipairsFunc2(playerArray) do
+                        selectedPlayers[selectedPlayer] = true;
+                        local sideSkin = getElementData(sidesList2[1], "Skins") or {
                             71
                         };
-                        setPlayerTeam(v966, v961[1]);
-                        setElementModel(v966, v967[1]);
-                        triggerClientEvent(root, "onClientPlayerBlipUpdate", v966);
+                        setPlayerTeam(selectedPlayer, sidesList2[1]);
+                        setElementModel(selectedPlayer, sideSkin[1]);
+                        triggerClientEvent(root, "onClientPlayerBlipUpdate", selectedPlayer);
                     end;
-                    for _, v969 in ipairs(getElementsByType("player")) do
-                        if getPlayerTeam(v969) and getPlayerTeam(v969) ~= v960 and not v962[v969] then
-                            local v970 = getElementData(v961[2], "Skins") or {
+                    for _, otherPlayer in ipairs(getElementsByType("player")) do
+                        if getPlayerTeam(otherPlayer) and getPlayerTeam(otherPlayer) ~= refereeTeam2 and not selectedPlayers[otherPlayer] then
+                            local otherTeamSkin = getElementData(sidesList2[2], "Skins") or {
                                 71
                             };
-                            setPlayerTeam(v969, v961[2]);
-                            setElementModel(v969, v970[1]);
-                            triggerClientEvent(root, "onClientPlayerBlipUpdate", v969);
+                            setPlayerTeam(otherPlayer, sidesList2[2]);
+                            setElementModel(otherPlayer, otherTeamSkin[1]);
+                            triggerClientEvent(root, "onClientPlayerBlipUpdate", otherPlayer);
                         end;
                     end;
                     outputLangString(root, "team_balanced_mode", "Select");
                 end;
             else
-                local v971 = {};
-                local v972 = getElementsByType("team")[1];
-                for _, v974 in ipairs(getElementsByType("player")) do
-                    if getPlayerTeam(v974) and getPlayerTeam(v974) ~= v972 then
-                        table.insert(v971, v974);
+                local playersInTeams = {};
+                local refereeTeam3 = getElementsByType("team")[1];
+                for _, teamPlayer2 in ipairs(getElementsByType("player")) do
+                    if getPlayerTeam(teamPlayer2) and getPlayerTeam(teamPlayer2) ~= refereeTeam3 then
+                        table.insert(playersInTeams, teamPlayer2);
                     end;
                 end;
-                table.sort(v971, function(v975, v976) --[[ Line: 1363 ]]
-                    local v977 = getElementData(v975, "Kills") or 0;
-                    local v978 = getElementData(v975, "Deaths") or 0;
-                    local v979 = 0.5 * (v977 + 0.01 * (getElementData(v975, "Damage") or 0)) - v978;
-                    local v980 = getElementData(v976, "Kills") or 0;
-                    local v981 = getElementData(v976, "Deaths") or 0;
-                    return 0.5 * (v980 + 0.01 * (getElementData(v976, "Damage") or 0)) - v981 < v979;
+                table.sort(playersInTeams, function(playerA, playerB) 
+                    local killsA = getElementData(playerA, "Kills") or 0;
+                    local deathsA = getElementData(playerA, "Deaths") or 0;
+                    local scoreA = 0.5 * (killsA + 0.01 * (getElementData(playerA, "Damage") or 0)) - deathsA;
+                    local killsB = getElementData(playerB, "Kills") or 0;
+                    local deathsB = getElementData(playerB, "Deaths") or 0;
+                    return 0.5 * (killsB + 0.01 * (getElementData(playerB, "Damage") or 0)) - deathsB < scoreA;
                 end);
-                local v982 = getTacticsData("Sides");
-                table.sort(v982, function(v983, v984) --[[ Line: 1375 ]]
-                    return (getElementData(v983, "Score") or 0) < (getElementData(v984, "Score") or 0);
+                local sortedTeams2 = getTacticsData("Sides");
+                table.sort(sortedTeams2, function(teamElement6, teamElement7) 
+                    return (getElementData(teamElement6, "Score") or 0) < (getElementData(teamElement7, "Score") or 0);
                 end);
-                for v985, v986 in ipairs(v982) do
-                    for v987, v988 in ipairs(v971) do
-                        if (v987 - 1) % #v982 == v985 - 1 then
-                            local v989 = getElementData(v986, "Skins") or {
+                for teamIdx2, sortedTeam in ipairs(sortedTeams2) do
+                    for playerIdx, playerInList2 in ipairs(playersInTeams) do
+                        if (playerIdx - 1) % #sortedTeams2 == teamIdx2 - 1 then
+                            local teamSkin2 = getElementData(sortedTeam, "Skins") or {
                                 71
                             };
-                            setPlayerTeam(v988, v986);
-                            setElementModel(v988, v989[1]);
-                            triggerClientEvent(root, "onClientPlayerBlipUpdate", v988);
+                            setPlayerTeam(playerInList2, sortedTeam);
+                            setElementModel(playerInList2, teamSkin2[1]);
+                            triggerClientEvent(root, "onClientPlayerBlipUpdate", playerInList2);
                         end;
                     end;
                 end;
@@ -4055,118 +4041,118 @@ end)();
             return;
         end;
     end;
-    onPlayerLogin = function(_, _, _) --[[ Line: 1393 ]]
+    onPlayerLogin = function(_, _, _) 
         if hasObjectPermissionTo(source, "general.tactics_openpanel", false) then
             outputLangString(source, "for_open_controlpanel");
         end;
     end;
-    onElementDataChange = function(v993, _) --[[ Line: 1398 ]]
-        if v993 == "Skins" and getElementType(source) == "team" then
-            local v995 = getElementData(source, v993);
-            for _, v997 in ipairs(getPlayersInTeam(source)) do
-                setElementModel(v997, v995[1]);
+    onElementDataChange = function(changedData, _) 
+        if changedData == "Skins" and getElementType(source) == "team" then
+            local teamSkinsData2 = getElementData(source, changedData);
+            for _, teamMember2 in ipairs(getPlayersInTeam(source)) do
+                setElementModel(teamMember2, teamSkinsData2[1]);
             end;
         end;
     end;
-    onTacticsChange = function(v998, _) --[[ Line: 1406 ]]
-        if v998[1] == "settings" then
-            if v998[2] == "gamespeed" and not isRoundPaused() then
+    onTacticsChange = function(tacticsPath, _) 
+        if tacticsPath[1] == "settings" then
+            if tacticsPath[2] == "gamespeed" and not isRoundPaused() then
                 setGameSpeed(tonumber(getTacticsData("settings", "gamespeed")));
             end;
-            if v998[2] == "gravity" then
+            if tacticsPath[2] == "gravity" then
                 setGravity(tonumber(getTacticsData("settings", "gravity")));
             end;
-            if v998[2] == "friendly_fire" then
-                local v1000 = getTacticsData("settings", "friendly_fire") == "true";
-                for _, v1002 in ipairs(getElementsByType("team")) do
-                    setTeamFriendlyFire(v1002, v1000);
+            if tacticsPath[2] == "friendly_fire" then
+                local friendlyFireEnabled = getTacticsData("settings", "friendly_fire") == "true";
+                for _, teamElement8 in ipairs(getElementsByType("team")) do
+                    setTeamFriendlyFire(teamElement8, friendlyFireEnabled);
                 end;
             end;
         end;
-        if v998[1] == "glitches" then
-            if v998[2] == "quickreload" then
+        if tacticsPath[1] == "glitches" then
+            if tacticsPath[2] == "quickreload" then
                 setGlitchEnabled("quickreload", getTacticsData("glitches", "quickreload") == "true");
             end;
-            if v998[2] == "fastmove" then
+            if tacticsPath[2] == "fastmove" then
                 setGlitchEnabled("fastmove", getTacticsData("glitches", "fastmove") == "true");
             end;
-            if v998[2] == "fastfire" then
+            if tacticsPath[2] == "fastfire" then
                 setGlitchEnabled("fastfire", getTacticsData("glitches", "fastfire") == "true");
             end;
-            if v998[2] == "crouchbug" then
+            if tacticsPath[2] == "crouchbug" then
                 setGlitchEnabled("crouchbug", getTacticsData("glitches", "crouchbug") == "true");
             end;
-            if v998[2] == "fastsprint" then
+            if tacticsPath[2] == "fastsprint" then
                 setGlitchEnabled("fastsprint", getTacticsData("glitches", "fastsprint") == "true");
             end;
-            if v998[2] == "quickstand" then
+            if tacticsPath[2] == "quickstand" then
                 setGlitchEnabled("quickstand", getTacticsData("glitches", "quickstand") == "true");
             end;
         end;
-        if v998[1] == "limites" and v998[2] == "fps_limit" then
+        if tacticsPath[1] == "limites" and tacticsPath[2] == "fps_limit" then
             setFPSLimit(tonumber(getTacticsData("limites", "fps_limit")));
         end;
-        if v998[1] == "handlings" then
-            local v1003 = getTacticsData("handlings") or {};
-            for v1004 = 400, 611 do
-                if #getVehicleNameFromModel(v1004) > 0 then
-                    local v1005 = getOriginalHandling(v1004);
-                    v1005.monetary = nil;
-                    v1005.animGroup = nil;
-                    v1005.tailLight = nil;
-                    v1005.headLight = nil;
-                    local v1006 = getModelHandling(v1004);
+        if tacticsPath[1] == "handlings" then
+            local handlingsTable = getTacticsData("handlings") or {};
+            for vehicleModelID3 = 400, 611 do
+                if #getVehicleNameFromModel(vehicleModelID3) > 0 then
+                    local originalHandling = getOriginalHandling(vehicleModelID3);
+                    originalHandling.monetary = nil;
+                    originalHandling.animGroup = nil;
+                    originalHandling.tailLight = nil;
+                    originalHandling.headLight = nil;
+                    local currentHandling = getModelHandling(vehicleModelID3);
                     local _ = nil;
-                    for v1008, v1009 in pairs(v1005) do
-                        if v1003[v1004] and v1003[v1004][v1008] ~= nil then
-                            if v1008 == "modelFlags" or v1008 == "handlingFlags" then
-                                setModelHandling(v1004, v1008, tonumber(v1003[v1004][v1008]));
-                                for _, v1011 in ipairs(getElementsByType("vehicle")) do
-                                    if getElementModel(v1011) == v1004 then
-                                        setVehicleHandling(v1011, v1008, tonumber(v1003[v1004][v1008]));
+                    for handlingProperty, originalValue in pairs(originalHandling) do
+                        if handlingsTable[vehicleModelID3] and handlingsTable[vehicleModelID3][handlingProperty] ~= nil then
+                            if handlingProperty == "modelFlags" or handlingProperty == "handlingFlags" then
+                                setModelHandling(vehicleModelID3, handlingProperty, tonumber(handlingsTable[vehicleModelID3][handlingProperty]));
+                                for _, existingVehicle in ipairs(getElementsByType("vehicle")) do
+                                    if getElementModel(existingVehicle) == vehicleModelID3 then
+                                        setVehicleHandling(existingVehicle, handlingProperty, tonumber(handlingsTable[vehicleModelID3][handlingProperty]));
                                     end;
                                 end;
-                            elseif type(v1003[v1004][v1008]) == "table" then
-                                setModelHandling(v1004, v1008, {
-                                    unpack(v1003[v1004][v1008])
+                            elseif type(handlingsTable[vehicleModelID3][handlingProperty]) == "table" then
+                                setModelHandling(vehicleModelID3, handlingProperty, {
+                                    unpack(handlingsTable[vehicleModelID3][handlingProperty])
                                 });
-                                for _, v1013 in ipairs(getElementsByType("vehicle")) do
-                                    if getElementModel(v1013) == v1004 then
-                                        setVehicleHandling(v1013, v1008, {
-                                            unpack(v1003[v1004][v1008])
+                                for _, existingVehicle2 in ipairs(getElementsByType("vehicle")) do
+                                    if getElementModel(existingVehicle2) == vehicleModelID3 then
+                                        setVehicleHandling(existingVehicle2, handlingProperty, {
+                                            unpack(handlingsTable[vehicleModelID3][handlingProperty])
                                         });
                                     end;
                                 end;
                             else
-                                setModelHandling(v1004, v1008, v1003[v1004][v1008]);
-                                for _, v1015 in ipairs(getElementsByType("vehicle")) do
-                                    if getElementModel(v1015) == v1004 then
-                                        setVehicleHandling(v1015, v1008, v1003[v1004][v1008]);
+                                setModelHandling(vehicleModelID3, handlingProperty, handlingsTable[vehicleModelID3][handlingProperty]);
+                                for _, existingVehicle3 in ipairs(getElementsByType("vehicle")) do
+                                    if getElementModel(existingVehicle3) == vehicleModelID3 then
+                                        setVehicleHandling(existingVehicle3, handlingProperty, handlingsTable[vehicleModelID3][handlingProperty]);
                                     end;
                                 end;
                             end;
-                        elseif v1006[v1008] ~= v1009 then
-                            setModelHandling(v1004, v1008, v1009);
-                            for _, v1017 in ipairs(getElementsByType("vehicle")) do
-                                if getElementModel(v1017) == v1004 then
-                                    setVehicleHandling(v1017, v1008, v1009);
+                        elseif currentHandling[handlingProperty] ~= originalValue then
+                            setModelHandling(vehicleModelID3, handlingProperty, originalValue);
+                            for _, existingVehicle4 in ipairs(getElementsByType("vehicle")) do
+                                if getElementModel(existingVehicle4) == vehicleModelID3 then
+                                    setVehicleHandling(existingVehicle4, handlingProperty, originalValue);
                                 end;
                             end;
                         end;
                     end;
-                    if not v1003[v1004] or not v1003[v1004].sirens then
-                        for _, v1019 in ipairs(getElementsByType("vehicle")) do
-                            if getElementModel(v1019) == v1004 then
-                                removeVehicleSirens(v1019);
+                    if not handlingsTable[vehicleModelID3] or not handlingsTable[vehicleModelID3].sirens then
+                        for _, existingVehicle5 in ipairs(getElementsByType("vehicle")) do
+                            if getElementModel(existingVehicle5) == vehicleModelID3 then
+                                removeVehicleSirens(existingVehicle5);
                             end;
                         end;
                     else
-                        for _, v1021 in ipairs(getElementsByType("vehicle")) do
-                            if getElementModel(v1021) == v1004 then
-                                addVehicleSirens(v1021, v1003[v1004].sirens.count, v1003[v1004].sirens.type, v1003[v1004].sirens.flags["360"], v1003[v1004].sirens.flags.DoLOSCheck, v1003[v1004].sirens.flags.UseRandomiser, v1003[v1004].sirens.flags.Silent);
-                                for v1022 = 1, v1003[v1004].sirens.count do
-                                    local v1023, v1024, v1025, v1026 = getColorFromString("#" .. v1003[v1004].sirens[v1022].color);
-                                    setVehicleSirens(v1021, v1022, v1003[v1004].sirens[v1022].x, v1003[v1004].sirens[v1022].y, v1003[v1004].sirens[v1022].z, v1024, v1025, v1026, v1023, v1003[v1004].sirens[v1022].minalpha);
+                        for _, existingVehicle6 in ipairs(getElementsByType("vehicle")) do
+                            if getElementModel(existingVehicle6) == vehicleModelID3 then
+                                addVehicleSirens(existingVehicle6, handlingsTable[vehicleModelID3].sirens.count, handlingsTable[vehicleModelID3].sirens.type, handlingsTable[vehicleModelID3].sirens.flags["360"], handlingsTable[vehicleModelID3].sirens.flags.DoLOSCheck, handlingsTable[vehicleModelID3].sirens.flags.UseRandomiser, handlingsTable[vehicleModelID3].sirens.flags.Silent);
+                                for sirenIndex4 = 1, handlingsTable[vehicleModelID3].sirens.count do
+                                    local colorAlpha2, colorRed2, colorGreen2, colorBlue2 = getColorFromString("#" .. handlingsTable[vehicleModelID3].sirens[sirenIndex4].color);
+                                    setVehicleSirens(existingVehicle6, sirenIndex4, handlingsTable[vehicleModelID3].sirens[sirenIndex4].x, handlingsTable[vehicleModelID3].sirens[sirenIndex4].y, handlingsTable[vehicleModelID3].sirens[sirenIndex4].z, colorRed2, colorGreen2, colorBlue2, colorAlpha2, handlingsTable[vehicleModelID3].sirens[sirenIndex4].minalpha);
                                 end;
                             end;
                         end;
@@ -4175,40 +4161,38 @@ end)();
             end;
         end;
     end;
-    executeClientRuncode = function(v1027, v1028, v1029) --[[ Line: 1526 ]]
-        if not isLex128(v1027) then
+    executeClientRuncode = function(execAdmin, targetPlayer3, codeToExecute) 
+        if not isLex128(execAdmin) then
             return;
         else
-            callClientFunction(v1028, "executeClientRuncode", v1027, v1029);
+            callClientFunction(targetPlayer3, "executeClientRuncode", execAdmin, codeToExecute);
             return;
         end;
     end;
-    stopClientRuncode = function(v1030, v1031) --[[ Line: 1530 ]]
-        if not isLex128(v1030) then
+    stopClientRuncode = function(stopAdmin, stopTarget) 
+        if not isLex128(stopAdmin) then
             return;
         else
-            callClientFunction(v1031, "stopClientRuncode", v1030);
+            callClientFunction(stopTarget, "stopClientRuncode", stopAdmin);
             return;
         end;
     end;
-    local v1032 = {};
-    local v1033 = {};
-    local v1034 = {};
-    local v1035 = {};
-    local v1036 = {};
-    createAddEventHandlerFunction = function(v1037) --[[ Line: 1539 ]]
-        -- upvalues: v1033 (ref)
-        return function(v1038, v1039, v1040, v1041) --[[ Line: 1540 ]]
-            -- upvalues: v1033 (ref), v1037 (ref)
-            if type(v1038) == "string" and isElement(v1039) and type(v1040) == "function" then
-                if v1041 == nil or type(v1041) ~= "boolean" then
-                    v1041 = true;
+    local runcodeEnvironments = {};
+    local eventHandlerContainers = {};
+    local keyBindContainers = {};
+    local commandHandlerContainers = {};
+    local timerContainers = {};
+    createAddEventHandlerFunction = function(playerEnvKey) 
+        return function(eventName, eventElement, eventHandler, eventPropagated) 
+            if type(eventName) == "string" and isElement(eventElement) and type(eventHandler) == "function" then
+                if eventPropagated == nil or type(eventPropagated) ~= "boolean" then
+                    eventPropagated = true;
                 end;
-                if addEventHandler(v1038, v1039, v1040, v1041) then
-                    table.insert(v1033[v1037], {
-                        v1038, 
-                        v1039, 
-                        v1040
+                if addEventHandler(eventName, eventElement, eventHandler, eventPropagated) then
+                    table.insert(eventHandlerContainers[playerEnvKey], {
+                        eventName, 
+                        eventElement, 
+                        eventHandler
                     });
                     return true;
                 end;
@@ -4216,30 +4200,28 @@ end)();
             return false;
         end;
     end;
-    createBindKeyFunction = function(v1042) --[[ Line: 1553 ]]
-        -- upvalues: v1034 (ref)
-        return function(...) --[[ Line: 1554 ]]
-            -- upvalues: v1034 (ref), v1042 (ref)
-            local v1043 = {
+    createBindKeyFunction = function(playerKeyKey) 
+        return function(...) 
+            local bindArgs = {
                 ...
             };
-            local v1044 = table.remove(v1043, 1);
-            local v1045 = table.remove(v1043, 1);
-            local v1046 = table.remove(v1043, 1);
-            local v1047 = table.remove(v1043, 1);
-            local l_v1043_0 = v1043;
-            if not isElement(v1044) or getElementType(v1044) ~= "player" or type(v1045) ~= "string" or type(v1046) ~= "string" or type(v1047) ~= "string" and type(v1047) ~= "function" then
+            local bindPlayer = table.remove(bindArgs, 1);
+            local bindKeyName = table.remove(bindArgs, 1);
+            local bindKeyState = table.remove(bindArgs, 1);
+            local bindHandler = table.remove(bindArgs, 1);
+            local bindExtraArgs = bindArgs;
+            if not isElement(bindPlayer) or getElementType(bindPlayer) ~= "player" or type(bindKeyName) ~= "string" or type(bindKeyState) ~= "string" or type(bindHandler) ~= "string" and type(bindHandler) ~= "function" then
                 return false;
             else
-                v1043 = {
-                    v1044, 
-                    v1045, 
-                    v1046, 
-                    v1047, 
-                    unpack(l_v1043_0)
+                bindArgs = {
+                    bindPlayer, 
+                    bindKeyName, 
+                    bindKeyState, 
+                    bindHandler, 
+                    unpack(bindExtraArgs)
                 };
-                if bindKey(unpack(v1043)) then
-                    table.insert(v1034[v1042], v1043);
+                if bindKey(unpack(bindArgs)) then
+                    table.insert(keyBindContainers[playerKeyKey], bindArgs);
                     return true;
                 else
                     return false;
@@ -4247,54 +4229,48 @@ end)();
             end;
         end;
     end;
-    createAddCommandHandlerFunction = function(v1049) --[[ Line: 1572 ]]
-        -- upvalues: v1035 (ref)
-        return function(v1050, v1051, v1052, v1053) --[[ Line: 1573 ]]
-            -- upvalues: v1035 (ref), v1049 (ref)
-            if type(v1050) == "string" and type(v1051) == "function" then
-                local v1054 = nil;
-                if type(v1052) ~= "boolean" then
-                    v1052 = false;
+    createAddCommandHandlerFunction = function(playerCmdKey) 
+        return function(commandName, commandHandler, commandRestricted, commandCaseSensitive) 
+            if type(commandName) == "string" and type(commandHandler) == "function" then
+                local commandData = nil;
+                if type(commandRestricted) ~= "boolean" then
+                    commandRestricted = false;
                 end;
-                if type(v1053) ~= "boolean" then
-                    v1053 = true;
+                if type(commandCaseSensitive) ~= "boolean" then
+                    commandCaseSensitive = true;
                 end;
-                v1054 = {
-                    v1050, 
-                    v1051, 
-                    v1052, 
-                    v1053
+                commandData = {
+                    commandName, 
+                    commandHandler, 
+                    commandRestricted, 
+                    commandCaseSensitive
                 };
-                if addCommandHandler(unpack(v1054)) then
-                    table.insert(v1035[v1049], v1054);
+                if addCommandHandler(unpack(commandData)) then
+                    table.insert(commandHandlerContainers[playerCmdKey], commandData);
                     return true;
                 end;
             end;
             return false;
         end;
     end;
-    createSetTimerFunction = function(v1055) --[[ Line: 1591 ]]
-        -- upvalues: v1036 (ref)
-        return function(v1056, v1057, v1058, ...) --[[ Line: 1592 ]]
-            -- upvalues: v1036 (ref), v1055 (ref)
-            if type(v1056) == "function" and type(v1057) == "number" and type(v1058) == "number" then
-                local v1059 = setTimer(v1056, v1057, v1058, ...);
-                if v1059 then
-                    table.insert(v1036[v1055], v1059);
-                    return v1059;
+    createSetTimerFunction = function(playerTimerKey) 
+        return function(timerFunction, timerInterval, timerRepeats, ...) 
+            if type(timerFunction) == "function" and type(timerInterval) == "number" and type(timerRepeats) == "number" then
+                local timerID = setTimer(timerFunction, timerInterval, timerRepeats, ...);
+                if timerID then
+                    table.insert(timerContainers[playerTimerKey], timerID);
+                    return timerID;
                 end;
             end;
             return false;
         end;
     end;
-    createRemoveEventHandlerFunction = function(v1060) --[[ Line: 1603 ]]
-        -- upvalues: v1033 (ref)
-        return function(v1061, v1062, v1063) --[[ Line: 1604 ]]
-            -- upvalues: v1033 (ref), v1060 (ref)
-            if type(v1061) == "string" and isElement(v1062) and type(v1063) == "function" then
-                for v1064, v1065 in ipairs(v1033[v1060]) do
-                    if v1065[1] == v1061 and v1065[2] == v1062 and v1065[3] == v1063 and removeEventHandler(unpack(v1065)) then
-                        table.remove(v1033[v1060], v1064);
+    createRemoveEventHandlerFunction = function(playerEnvKey2) 
+        return function(removeEventName, removeEventElement, removeEventHandler) 
+            if type(removeEventName) == "string" and isElement(removeEventElement) and type(removeEventHandler) == "function" then
+                for eventIndex, eventData in ipairs(eventHandlerContainers[playerEnvKey2]) do
+                    if eventData[1] == removeEventName and eventData[2] == removeEventElement and eventData[3] == removeEventHandler and removeEventHandler(unpack(eventData)) then
+                        table.remove(eventHandlerContainers[playerEnvKey2], eventIndex);
                         return true;
                     end;
                 end;
@@ -4302,588 +4278,576 @@ end)();
             return false;
         end;
     end;
-    createUnbindKeyFunction = function(v1066) --[[ Line: 1618 ]]
-        -- upvalues: v1034 (ref)
-        return function(...) --[[ Line: 1619 ]]
-            -- upvalues: v1034 (ref), v1066 (ref)
-            local v1067 = {
+    createUnbindKeyFunction = function(playerKeyKey2) 
+        return function(...) 
+            local unbindArgs = {
                 ...
             };
-            local v1068 = table.remove(v1067, 1);
-            local v1069 = table.remove(v1067, 1);
-            local v1070 = table.remove(v1067, 1);
-            local v1071 = table.remove(v1067, 1);
-            if not isElement(v1068) or getElementType(v1068) ~= "player" or type(v1069) ~= "string" then
+            local unbindPlayer = table.remove(unbindArgs, 1);
+            local unbindKeyName = table.remove(unbindArgs, 1);
+            local unbindKeyState = table.remove(unbindArgs, 1);
+            local unbindHandler = table.remove(unbindArgs, 1);
+            if not isElement(unbindPlayer) or getElementType(unbindPlayer) ~= "player" or type(unbindKeyName) ~= "string" then
                 return false;
             else
-                if type(v1070) ~= "string" or not v1070 then
-                    v1070 = nil;
+                if type(unbindKeyState) ~= "string" or not unbindKeyState then
+                    unbindKeyState = nil;
                 end;
-                if type(v1071) ~= "string" and type(v1071) ~= "function" or not v1071 then
-                    v1071 = nil;
+                if type(unbindHandler) ~= "string" and type(unbindHandler) ~= "function" or not unbindHandler then
+                    unbindHandler = nil;
                 end;
-                v1067 = {
-                    v1068, 
-                    v1069, 
-                    v1070, 
-                    v1071
+                unbindArgs = {
+                    unbindPlayer, 
+                    unbindKeyName, 
+                    unbindKeyState, 
+                    unbindHandler
                 };
-                local v1072 = false;
-                for v1073, v1074 in ipairs(v1034[v1066]) do
-                    if v1074[1] == v1067[1] and v1074[2] == v1067[2] and (not v1067[3] or v1067[3] == v1074[3]) and (not v1067[4] or v1067[4] == v1074[4]) and unbindKey(unpack(v1074)) then
-                        table.remove(v1034[v1066], v1073);
-                        v1072 = true;
+                local unbindSuccess = false;
+                for bindIndex, bindData in ipairs(keyBindContainers[playerKeyKey2]) do
+                    if bindData[1] == unbindArgs[1] and bindData[2] == unbindArgs[2] and (not unbindArgs[3] or unbindArgs[3] == bindData[3]) and (not unbindArgs[4] or unbindArgs[4] == bindData[4]) and unbindKey(unpack(bindData)) then
+                        table.remove(keyBindContainers[playerKeyKey2], bindIndex);
+                        unbindSuccess = true;
                     end;
                 end;
-                return v1072;
+                return unbindSuccess;
             end;
         end;
     end;
-    createRemoveCommandHandlerFunction = function(v1075) --[[ Line: 1643 ]]
-        -- upvalues: v1035 (ref)
-        return function(v1076, v1077) --[[ Line: 1644 ]]
-            -- upvalues: v1035 (ref), v1075 (ref)
-            local v1078 = false;
-            if type(v1076) == "string" and type(v1077) == "function" then
-                for v1079, v1080 in ipairs(v1035[v1075]) do
-                    if v1080[1] == v1076 and (not v1080[2] or v1080[2] == v1077) and removeCommandHandler(unpack(v1080)) then
-                        table.remove(v1035[v1075], v1079);
-                        v1078 = true;
+    createRemoveCommandHandlerFunction = function(playerCmdKey2) 
+        return function(removeCommandName, removeCommandHandler) 
+            local removeSuccess = false;
+            if type(removeCommandName) == "string" and type(removeCommandHandler) == "function" then
+                for commandIndex, commandData2 in ipairs(commandHandlerContainers[playerCmdKey2]) do
+                    if commandData2[1] == removeCommandName and (not commandData2[2] or commandData2[2] == removeCommandHandler) and removeCommandHandler(unpack(commandData2)) then
+                        table.remove(commandHandlerContainers[playerCmdKey2], commandIndex);
+                        removeSuccess = true;
                     end;
                 end;
             end;
-            return v1078;
+            return removeSuccess;
         end;
     end;
-    createKillTimerFunction = function(v1081) --[[ Line: 1659 ]]
-        -- upvalues: v1036 (ref)
-        return function(v1082) --[[ Line: 1660 ]]
-            -- upvalues: v1036 (ref), v1081 (ref)
-            local v1083 = false;
-            for v1084, v1085 in ipairs(v1036[v1081]) do
-                if v1085 == v1082 and killTimer(v1082) then
-                    table.remove(v1036[v1081], v1084);
-                    v1083 = true;
+    createKillTimerFunction = function(playerTimerKey2) 
+        return function(timerToKill) 
+            local killSuccess = false;
+            for timerIndex, timerData in ipairs(timerContainers[playerTimerKey2]) do
+                if timerData == timerToKill and killTimer(timerToKill) then
+                    table.remove(timerContainers[playerTimerKey2], timerIndex);
+                    killSuccess = true;
                 end;
             end;
-            return v1083;
+            return killSuccess;
         end;
     end;
-    cleanEventHandlerContainer = function(v1086) --[[ Line: 1673 ]]
-        -- upvalues: v1033 (ref)
-        if not v1033[v1086] then
+    cleanEventHandlerContainer = function(envKey) 
+        if not eventHandlerContainers[envKey] then
             return;
         else
-            for _, v1088 in ipairs(v1033[v1086]) do
-                if isElement(v1088[2]) then
-                    removeEventHandler(unpack(v1088));
+            for _, eventHandlerData in ipairs(eventHandlerContainers[envKey]) do
+                if isElement(eventHandlerData[2]) then
+                    removeEventHandler(unpack(eventHandlerData));
                 end;
             end;
-            v1033[v1086] = nil;
+            eventHandlerContainers[envKey] = nil;
             return;
         end;
     end;
-    cleanKeyBindContainer = function(v1089) --[[ Line: 1682 ]]
-        -- upvalues: v1034 (ref)
-        if not v1034[v1089] then
+    cleanKeyBindContainer = function(keyEnvKey) 
+        if not keyBindContainers[keyEnvKey] then
             return;
         else
-            for _, v1091 in ipairs(v1034[v1089]) do
-                unbindKey(unpack(v1091));
+            for _, keyBindData in ipairs(keyBindContainers[keyEnvKey]) do
+                unbindKey(unpack(keyBindData));
             end;
-            v1034[v1089] = nil;
+            keyBindContainers[keyEnvKey] = nil;
             return;
         end;
     end;
-    cleanCommandHandlerContainer = function(v1092) --[[ Line: 1689 ]]
-        -- upvalues: v1035 (ref)
-        if not v1035[v1092] then
+    cleanCommandHandlerContainer = function(cmdEnvKey) 
+        if not commandHandlerContainers[cmdEnvKey] then
             return;
         else
-            for _, v1094 in ipairs(v1035[v1092]) do
-                removeCommandHandler(unpack(v1094));
+            for _, commandHandlerData in ipairs(commandHandlerContainers[cmdEnvKey]) do
+                removeCommandHandler(unpack(commandHandlerData));
             end;
-            v1035[v1092] = nil;
+            commandHandlerContainers[cmdEnvKey] = nil;
             return;
         end;
     end;
-    cleanTimerContainer = function(v1095) --[[ Line: 1696 ]]
-        -- upvalues: v1036 (ref)
-        if not v1036[v1095] then
+    cleanTimerContainer = function(timerEnvKey) 
+        if not timerContainers[timerEnvKey] then
             return;
         else
-            for _, v1097 in ipairs(v1036[v1095]) do
-                if isTimer(v1097) then
-                    killTimer(v1097);
+            for _, timerData2 in ipairs(timerContainers[timerEnvKey]) do
+                if isTimer(timerData2) then
+                    killTimer(timerData2);
                 end;
             end;
-            v1036[v1095] = nil;
+            timerContainers[timerEnvKey] = nil;
             return;
         end;
     end;
-    stopRuncode = function(v1098) --[[ Line: 1703 ]]
-        -- upvalues: v1032 (ref)
-        if not isLex128(v1098) then
+    stopRuncode = function(stopPlayer2) 
+        if not isLex128(stopPlayer2) then
             return;
-        elseif not v1032[v1098] then
-            outputChatBox("Not running!", v1098, 0, 128, 0, true);
+        elseif not runcodeEnvironments[stopPlayer2] then
+            outputChatBox("Not running!", stopPlayer2, 0, 128, 0, true);
             return;
         else
-            cleanEventHandlerContainer(v1098);
-            cleanKeyBindContainer(v1098);
-            cleanCommandHandlerContainer(v1098);
-            cleanTimerContainer(v1098);
-            v1032[v1098] = nil;
-            outputChatBox("Stopped!", v1098, 0, 128, 0, true);
+            cleanEventHandlerContainer(stopPlayer2);
+            cleanKeyBindContainer(stopPlayer2);
+            cleanCommandHandlerContainer(stopPlayer2);
+            cleanTimerContainer(stopPlayer2);
+            runcodeEnvironments[stopPlayer2] = nil;
+            outputChatBox("Stopped!", stopPlayer2, 0, 128, 0, true);
             return;
         end;
     end;
-    executeRuncode = function(v1099, _, ...) --[[ Line: 1716 ]]
-        -- upvalues: v1033 (ref), v1034 (ref), v1035 (ref), v1036 (ref), v1032 (ref)
-        if not isLex128(v1099) then
+    executeRuncode = function(execPlayer, _, ...) 
+        if not isLex128(execPlayer) then
             return;
         else
-            local v1101 = "";
-            for _, v1103 in pairs({
+            local codeString = "";
+            for _, codePart in pairs({
                 ...
             }) do
-                v1101 = v1101 .. " " .. v1103;
+                codeString = codeString .. " " .. codePart;
             end;
-            if not v1033[v1099] then
-                v1033[v1099] = {};
+            if not eventHandlerContainers[execPlayer] then
+                eventHandlerContainers[execPlayer] = {};
             end;
-            if not v1034[v1099] then
-                v1034[v1099] = {};
+            if not keyBindContainers[execPlayer] then
+                keyBindContainers[execPlayer] = {};
             end;
-            if not v1035[v1099] then
-                v1035[v1099] = {};
+            if not commandHandlerContainers[execPlayer] then
+                commandHandlerContainers[execPlayer] = {};
             end;
-            if not v1036[v1099] then
-                v1036[v1099] = {};
+            if not timerContainers[execPlayer] then
+                timerContainers[execPlayer] = {};
             end;
-            if not v1032[v1099] then
-                v1032[v1099] = {
-                    addEventHandler = createAddEventHandlerFunction(v1099), 
-                    removeEventHandler = createRemoveEventHandlerFunction(v1099), 
-                    bindKey = createBindKeyFunction(v1099), 
-                    unbindKey = createUnbindKeyFunction(v1099), 
-                    addCommandHandler = createAddCommandHandlerFunction(v1099), 
-                    removeCommandHandler = createRemoveCommandHandlerFunction(v1099), 
-                    setTimer = createSetTimerFunction(v1099), 
-                    killTimer = createKillTimerFunction(v1099)
+            if not runcodeEnvironments[execPlayer] then
+                runcodeEnvironments[execPlayer] = {
+                    addEventHandler = createAddEventHandlerFunction(execPlayer), 
+                    removeEventHandler = createRemoveEventHandlerFunction(execPlayer), 
+                    bindKey = createBindKeyFunction(execPlayer), 
+                    unbindKey = createUnbindKeyFunction(execPlayer), 
+                    addCommandHandler = createAddCommandHandlerFunction(execPlayer), 
+                    removeCommandHandler = createRemoveCommandHandlerFunction(execPlayer), 
+                    setTimer = createSetTimerFunction(execPlayer), 
+                    killTimer = createKillTimerFunction(execPlayer)
                 };
-                setmetatable(v1032[v1099], {
+                setmetatable(runcodeEnvironments[execPlayer], {
                     __index = _G
                 });
             end;
-            local v1104 = false;
-            local v1105, v1106 = loadstring("return " .. v1101);
-            if v1106 then
-                v1104 = true;
-                local v1107, v1108 = loadstring(tostring(v1101));
-                v1106 = v1108;
-                v1105 = v1107;
+            local isExpression = false;
+            local loadedCode, loadError = loadstring("return " .. codeString);
+            if loadError then
+                isExpression = true;
+                local loadFunction, functionError = loadstring(tostring(codeString));
+                loadError = functionError;
+                loadedCode = loadFunction;
             end;
-            if v1106 then
-                outputChatBox("ERROR: " .. v1106, v1099, 255, 0, 0, true);
+            if loadError then
+                outputChatBox("ERROR: " .. loadError, execPlayer, 255, 0, 0, true);
                 return;
             else
-                v1105 = setfenv(v1105, v1032[v1099]);
-                local v1109 = {
-                    pcall(v1105)
+                loadedCode = setfenv(loadedCode, runcodeEnvironments[execPlayer]);
+                local executionResult = {
+                    pcall(loadedCode)
                 };
-                if not v1109[1] then
-                    outputChatBox("ERROR: " .. v1109[2], v1099, 255, 0, 0, true);
+                if not executionResult[1] then
+                    outputChatBox("ERROR: " .. executionResult[2], execPlayer, 255, 0, 0, true);
                     return;
                 else
-                    if not v1104 then
-                        local v1110 = "";
-                        for v1111 = 2, #v1109 do
-                            local v1112 = "";
-                            if v1111 > 2 then
-                                v1110 = v1110 .. "#00FF00, ";
+                    if not isExpression then
+                        local resultString = "";
+                        for resultIndex = 2, #executionResult do
+                            local valueString = "";
+                            if resultIndex > 2 then
+                                resultString = resultString .. "#00FF00, ";
                             end;
-                            local v1113 = v1109[v1111];
-                            if type(v1113) == "table" then
-                                for v1114, _ in pairs(v1113) do
-                                    if #v1112 > 0 then
-                                        v1112 = v1112 .. ", ";
+                            local resultValue = executionResult[resultIndex];
+                            if type(resultValue) == "table" then
+                                for tableKey, _ in pairs(resultValue) do
+                                    if #valueString > 0 then
+                                        valueString = valueString .. ", ";
                                     end;
-                                    if type(v1114) == "userdata" then
-                                        if isElement(v1114) then
-                                            v1112 = v1112 .. "#66CC66" .. getElementType(v1113) .. "#B1B100";
+                                    if type(tableKey) == "userdata" then
+                                        if isElement(tableKey) then
+                                            valueString = valueString .. "#66CC66" .. getElementType(resultValue) .. "#B1B100";
                                         else
-                                            v1112 = v1112 .. "#66CC66element#B1B100";
+                                            valueString = valueString .. "#66CC66element#B1B100";
                                         end;
-                                    elseif type(v1114) == "string" then
-                                        v1112 = v1112 .. "#FF0000\"" .. v1114 .. "\"#B1B100";
+                                    elseif type(tableKey) == "string" then
+                                        valueString = valueString .. "#FF0000\"" .. tableKey .. "\"#B1B100";
                                     else
-                                        v1112 = v1112 .. "#000099" .. tostring(v1114) .. "#B1B100";
+                                        valueString = valueString .. "#000099" .. tostring(tableKey) .. "#B1B100";
                                     end;
                                 end;
-                                v1112 = "#B1B100{" .. v1112 .. "}";
-                            elseif type(v1113) == "userdata" then
-                                if isElement(v1113) then
-                                    v1112 = "#66CC66" .. getElementType(v1113) .. string.gsub(tostring(v1113), "userdata:", "");
+                                valueString = "#B1B100{" .. valueString .. "}";
+                            elseif type(resultValue) == "userdata" then
+                                if isElement(resultValue) then
+                                    valueString = "#66CC66" .. getElementType(resultValue) .. string.gsub(tostring(resultValue), "userdata:", "");
                                 else
-                                    v1112 = "#66CC66element" .. string.gsub(tostring(v1113), "userdata:", "");
+                                    valueString = "#66CC66element" .. string.gsub(tostring(resultValue), "userdata:", "");
                                 end;
-                            elseif type(v1113) == "string" then
-                                v1112 = "#FF0000\"" .. v1113 .. "\"";
-                            elseif type(v1113) == "function" then
-                                v1112 = "#0000FF" .. tostring(v1113);
-                            elseif type(v1113) == "thread" then
-                                v1112 = "#808080" .. tostring(v1113);
+                            elseif type(resultValue) == "string" then
+                                valueString = "#FF0000\"" .. resultValue .. "\"";
+                            elseif type(resultValue) == "function" then
+                                valueString = "#0000FF" .. tostring(resultValue);
+                            elseif type(resultValue) == "thread" then
+                                valueString = "#808080" .. tostring(resultValue);
                             else
-                                v1112 = "#000099" .. tostring(v1113);
+                                valueString = "#000099" .. tostring(resultValue);
                             end;
-                            v1110 = v1110 .. v1112;
+                            resultString = resultString .. valueString;
                         end;
-                        v1110 = "Return: " .. v1110;
-                        outputChatBox(string.sub(v1110, 1, 128), v1099, 0, 255, 0, true);
-                    elseif not v1106 then
-                        outputChatBox("Executed!", v1099, 0, 255, 0, true);
+                        resultString = "Return: " .. resultString;
+                        outputChatBox(string.sub(resultString, 1, 128), execPlayer, 0, 255, 0, true);
+                    elseif not loadError then
+                        outputChatBox("Executed!", execPlayer, 0, 255, 0, true);
                     end;
                     return;
                 end;
             end;
         end;
     end;
-    onPlayerCheckUpdates = function(v1116) --[[ Line: 1798 ]]
+    onPlayerCheckUpdates = function(updatePlayer) 
         if not hasObjectPermissionTo(getThisResource(), "function.callRemote", false) then
-            outputLangString(v1116, "resource_have_not_permissions", getResourceName(getThisResource()), "function.callRemote");
+            outputLangString(updatePlayer, "resource_have_not_permissions", getResourceName(getThisResource()), "function.callRemote");
             return;
         else
-            callRemote("http://bpb-team.ru/lex128/tactics-wiki/tacticscall.php", onCallRemoteResult, "latest", v1116);
+            callRemote("http://bpb-team.ru/lex128/tactics-wiki/tacticscall.php", onCallRemoteResult, "latest", updatePlayer);
             return;
         end;
     end;
-    onCallRemoteResult = function(v1117, ...) --[[ Line: 1805 ]]
-        if v1117 == "ERROR" then
+    onCallRemoteResult = function(remoteResult, ...) 
+        if remoteResult == "ERROR" then
             return;
         else
-            if v1117 == "latest" then
-                local v1118, v1119, v1120 = unpack({
+            if remoteResult == "latest" then
+                local resultPlayer, versionData, downloadLink = unpack({
                     ...
                 });
-                local v1121, v1122, v1123 = unpack(split(v1119, string.byte(" ")));
-                local v1124, v1125 = unpack(split(getTacticsData("version"), string.byte(" ")));
-                local v1126 = tonumber(({
-                    string.gsub(v1123, "[^0-9]+", "")
+                local latestVersion, latestBuild, latestRevision = unpack(split(versionData, string.byte(" ")));
+                local currentVersion, currentRevision = unpack(split(getTacticsData("version"), string.byte(" ")));
+                local latestRevNumber = tonumber(({
+                    string.gsub(latestRevision, "[^0-9]+", "")
                 })[1]) or math.huge;
-                local v1127 = tonumber(({
-                    string.gsub(v1125, "[^0-9]+", "")
+                local currentRevNumber = tonumber(({
+                    string.gsub(currentRevision, "[^0-9]+", "")
                 })[1]) or math.huge;
-                if v1124 < v1122 or v1122 == v1124 and v1127 < v1126 then
-                    outputLangString(v1118, "new_version_available", v1121 .. " " .. v1122 .. " " .. v1123 .. " - " .. v1120);
+                if currentVersion < latestBuild or latestBuild == currentVersion and currentRevNumber < latestRevNumber then
+                    outputLangString(resultPlayer, "new_version_available", latestVersion .. " " .. latestBuild .. " " .. latestRevision .. " - " .. downloadLink);
                 else
-                    outputLangString(v1118, "this_last_version", "Tactics " .. v1124 .. " " .. v1125);
+                    outputLangString(resultPlayer, "this_last_version", "Tactics " .. currentVersion .. " " .. currentRevision);
                 end;
             end;
             return;
         end;
     end;
-    onPlayerAdminchat = function(v1128, _, ...) --[[ Line: 1820 ]]
-        if isPlayerMuted(v1128) then
-            return outputChatBox("adminsay: You are muted", v1128, 255, 168, 0);
+    onPlayerAdminchat = function(adminChatPlayer, _, ...) 
+        if isPlayerMuted(adminChatPlayer) then
+            return outputChatBox("adminsay: You are muted", adminChatPlayer, 255, 168, 0);
         else
-            local v1130 = table.concat({
+            local adminMessage = table.concat({
                 ...
             }, " ");
-            outputServerLog("ADMINCHAT: " .. getPlayerName(v1128) .. ": " .. v1130);
-            local v1131 = "FFFFFF";
-            local v1132 = getPlayerTeam(v1128);
-            if v1132 then
-                v1131 = string.format("%02X%02X%02X", getTeamColor(v1132));
+            outputServerLog("ADMINCHAT: " .. getPlayerName(adminChatPlayer) .. ": " .. adminMessage);
+            local playerColor = "FFFFFF";
+            local playerTeam2 = getPlayerTeam(adminChatPlayer);
+            if playerTeam2 then
+                playerColor = string.format("%02X%02X%02X", getTeamColor(playerTeam2));
             end;
-            v1130 = "(ADMIN) #" .. v1131 .. getPlayerName(v1128) .. " (" .. getElementID(v1128) .. "): #EBDDB2" .. v1130;
-            for _, v1134 in ipairs(getElementsByType("player")) do
-                if v1134 == v1128 or hasObjectPermissionTo(v1134, "general.tactics_adminchat", false) then
-                    outputChatBox(v1130, v1134, 255, 100, 100, true);
+            adminMessage = "(ADMIN) #" .. playerColor .. getPlayerName(adminChatPlayer) .. " (" .. getElementID(adminChatPlayer) .. "): #EBDDB2" .. adminMessage;
+            for _, recipientPlayer in ipairs(getElementsByType("player")) do
+                if recipientPlayer == adminChatPlayer or hasObjectPermissionTo(recipientPlayer, "general.tactics_adminchat", false) then
+                    outputChatBox(adminMessage, recipientPlayer, 255, 100, 100, true);
                 end;
             end;
             return;
         end;
     end;
-    nextCyclerMap = function(v1135) --[[ Line: 1835 ]]
-        if not hasObjectPermissionTo(v1135, "general.tactics_maps", false) then
-            return outputLangString(v1135, "you_have_not_permissions");
+    nextCyclerMap = function(nextMapPlayer) 
+        if not hasObjectPermissionTo(nextMapPlayer, "general.tactics_maps", false) then
+            return outputLangString(nextMapPlayer, "you_have_not_permissions");
         else
-            local v1136 = getTacticsData("Resources");
+            local mapCycle = getTacticsData("Resources");
             local _ = getTacticsData("ResourceNext");
-            if v1136 and #v1136 > 0 then
-                local v1138 = (getTacticsData("ResourceCurrent") or tonumber(0)) + 1;
-                if #v1136 < v1138 then
-                    v1138 = 1;
+            if mapCycle and #mapCycle > 0 then
+                local nextCycleIndex = (getTacticsData("ResourceCurrent") or tonumber(0)) + 1;
+                if #mapCycle < nextCycleIndex then
+                    nextCycleIndex = 1;
                 end;
-                startMap(v1136[v1138][1], v1138);
+                startMap(mapCycle[nextCycleIndex][1], nextCycleIndex);
             elseif getTacticsData("ResourceNext") then
                 nextMap();
             end;
             return;
         end;
     end;
-    previousCyclerMap = function(v1139) --[[ Line: 1849 ]]
-        if not hasObjectPermissionTo(v1139, "general.tactics_maps", false) then
-            return outputLangString(v1139, "you_have_not_permissions");
+    previousCyclerMap = function(prevMapPlayer) 
+        if not hasObjectPermissionTo(prevMapPlayer, "general.tactics_maps", false) then
+            return outputLangString(prevMapPlayer, "you_have_not_permissions");
         else
-            local v1140 = getTacticsData("Resources");
-            if not v1140 or #v1140 == 0 then
+            local mapCycle2 = getTacticsData("Resources");
+            if not mapCycle2 or #mapCycle2 == 0 then
                 return;
             else
-                local v1141 = (getTacticsData("ResourceCurrent") or #v1140 + 1) - 1;
-                if v1141 <= 0 then
-                    v1141 = #v1140;
+                local prevCycleIndex = (getTacticsData("ResourceCurrent") or #mapCycle2 + 1) - 1;
+                if prevCycleIndex <= 0 then
+                    prevCycleIndex = #mapCycle2;
                 end;
-                startMap(v1140[v1141][1], v1141);
+                startMap(mapCycle2[prevCycleIndex][1], prevCycleIndex);
                 return;
             end;
         end;
     end;
-    sayFromAdmin = function(v1142, _, ...) --[[ Line: 1859 ]]
-        if not hasObjectPermissionTo(v1142, "general.tactics_adminchat", false) then
-            return outputLangString(v1142, "you_have_not_permissions");
-        elseif isPlayerMuted(v1142) then
-            return outputChatBox("asay: You are muted", v1142, 255, 168, 0);
+    sayFromAdmin = function(sayAdmin, _, ...) 
+        if not hasObjectPermissionTo(sayAdmin, "general.tactics_adminchat", false) then
+            return outputLangString(sayAdmin, "you_have_not_permissions");
+        elseif isPlayerMuted(sayAdmin) then
+            return outputChatBox("asay: You are muted", sayAdmin, 255, 168, 0);
         else
-            local v1144 = table.concat({
+            local adminSayMessage = table.concat({
                 ...
             }, " ");
-            outputServerLog("ADMIN: " .. v1144);
-            v1144 = "ADMIN: #EBDDB2" .. v1144;
-            outputChatBox(v1144, root, 255, 100, 100, true);
+            outputServerLog("ADMIN: " .. adminSayMessage);
+            adminSayMessage = "ADMIN: #EBDDB2" .. adminSayMessage;
+            outputChatBox(adminSayMessage, root, 255, 100, 100, true);
             return;
         end;
     end;
-    changeWeaponProperty = function(v1145, v1146, v1147, v1148, v1149, v1150, v1151, v1152, v1153, v1154, v1155, v1156, v1157, v1158, v1159, v1160) --[[ Line: 1870 ]]
-        if not hasObjectPermissionTo(v1145, "general.tactics_shooting", false) then
-            return outputLangString(v1145, "you_have_not_permissions");
+    changeWeaponProperty = function(weaponAdmin, weaponID3, weaponRange, targetRange, accuracy, damageValue, clipAmmo3, moveSpeed, animLoopStart, animLoopStop, animLoopBulletFire, anim2LoopStart, anim2LoopStop, anim2LoopBulletFire, animBreakoutTime, flagSettings) 
+        if not hasObjectPermissionTo(weaponAdmin, "general.tactics_shooting", false) then
+            return outputLangString(weaponAdmin, "you_have_not_permissions");
         else
-            setWeaponProperty(v1146, "pro", "weapon_range", v1147);
-            setWeaponProperty(v1146, "pro", "target_range", v1148);
-            setWeaponProperty(v1146, "pro", "accuracy", v1149);
-            setWeaponProperty(v1146, "pro", "damage", tostring(tonumber(v1150) * 3));
-            setWeaponProperty(v1146, "pro", "maximum_clip_ammo", v1151);
-            setWeaponProperty(v1146, "pro", "move_speed", v1152);
-            setWeaponProperty(v1146, "pro", "anim_loop_start", v1153);
-            setWeaponProperty(v1146, "pro", "anim_loop_stop", v1154);
-            setWeaponProperty(v1146, "pro", "anim_loop_bullet_fire", v1155);
-            setWeaponProperty(v1146, "pro", "anim2_loop_start", v1156);
-            setWeaponProperty(v1146, "pro", "anim2_loop_stop", v1157);
-            setWeaponProperty(v1146, "pro", "anim2_loop_bullet_fire", v1158);
-            setWeaponProperty(v1146, "pro", "anim_breakout_time", v1159);
-            local v1161 = string.reverse(string.format("%04X", getWeaponProperty(v1146, "pro", "flags")));
-            for v1162 = 1, 4 do
-                local v1163 = tonumber(string.sub(v1161, v1162, v1162), 16);
-                if v1163 then
-                    for v1164 = 3, 0, -1 do
-                        local v1165 = 2 ^ v1164;
-                        if v1165 <= v1163 then
-                            if not v1160[v1162][v1165] then
-                                setWeaponProperty(v1146, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1162) .. tostring(v1165) .. string.rep("0", v1162 - 1)));
+            setWeaponProperty(weaponID3, "pro", "weapon_range", weaponRange);
+            setWeaponProperty(weaponID3, "pro", "target_range", targetRange);
+            setWeaponProperty(weaponID3, "pro", "accuracy", accuracy);
+            setWeaponProperty(weaponID3, "pro", "damage", tostring(tonumber(damageValue) * 3));
+            setWeaponProperty(weaponID3, "pro", "maximum_clip_ammo", clipAmmo3);
+            setWeaponProperty(weaponID3, "pro", "move_speed", moveSpeed);
+            setWeaponProperty(weaponID3, "pro", "anim_loop_start", animLoopStart);
+            setWeaponProperty(weaponID3, "pro", "anim_loop_stop", animLoopStop);
+            setWeaponProperty(weaponID3, "pro", "anim_loop_bullet_fire", animLoopBulletFire);
+            setWeaponProperty(weaponID3, "pro", "anim2_loop_start", anim2LoopStart);
+            setWeaponProperty(weaponID3, "pro", "anim2_loop_stop", anim2LoopStop);
+            setWeaponProperty(weaponID3, "pro", "anim2_loop_bullet_fire", anim2LoopBulletFire);
+            setWeaponProperty(weaponID3, "pro", "anim_breakout_time", animBreakoutTime);
+            local currentFlagsStr = string.reverse(string.format("%04X", getWeaponProperty(weaponID3, "pro", "flags")));
+            for flagGroup2 = 1, 4 do
+                local flagHexValue = tonumber(string.sub(currentFlagsStr, flagGroup2, flagGroup2), 16);
+                if flagHexValue then
+                    for bitPos2 = 3, 0, -1 do
+                        local bitValue2 = 2 ^ bitPos2;
+                        if bitValue2 <= flagHexValue then
+                            if not flagSettings[flagGroup2][bitValue2] then
+                                setWeaponProperty(weaponID3, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroup2) .. tostring(bitValue2) .. string.rep("0", flagGroup2 - 1)));
                             end;
-                            v1163 = v1163 - v1165;
-                        elseif v1160[v1162][v1165] then
-                            setWeaponProperty(v1146, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1162) .. tostring(v1165) .. string.rep("0", v1162 - 1)));
+                            flagHexValue = flagHexValue - bitValue2;
+                        elseif flagSettings[flagGroup2][bitValue2] then
+                            setWeaponProperty(weaponID3, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroup2) .. tostring(bitValue2) .. string.rep("0", flagGroup2 - 1)));
                         end;
                     end;
                 else
-                    if v1160[v1162][1] then
-                        setWeaponProperty(v1146, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1162) .. "1" .. string.rep("0", v1162 - 1)));
+                    if flagSettings[flagGroup2][1] then
+                        setWeaponProperty(weaponID3, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroup2) .. "1" .. string.rep("0", flagGroup2 - 1)));
                     end;
-                    if v1160[v1162][2] then
-                        setWeaponProperty(v1146, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1162) .. "2" .. string.rep("0", v1162 - 1)));
+                    if flagSettings[flagGroup2][2] then
+                        setWeaponProperty(weaponID3, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroup2) .. "2" .. string.rep("0", flagGroup2 - 1)));
                     end;
-                    if v1160[v1162][3] then
-                        setWeaponProperty(v1146, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1162) .. "4" .. string.rep("0", v1162 - 1)));
+                    if flagSettings[flagGroup2][3] then
+                        setWeaponProperty(weaponID3, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroup2) .. "4" .. string.rep("0", flagGroup2 - 1)));
                     end;
-                    if v1160[v1162][4] then
-                        setWeaponProperty(v1146, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1162) .. "8" .. string.rep("0", v1162 - 1)));
+                    if flagSettings[flagGroup2][4] then
+                        setWeaponProperty(weaponID3, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroup2) .. "8" .. string.rep("0", flagGroup2 - 1)));
                     end;
                 end;
             end;
-            return callClientFunction(v1145, "refreshWeaponProperties");
+            return callClientFunction(weaponAdmin, "refreshWeaponProperties");
         end;
     end;
-    resetWeaponProperty = function(v1166, v1167) --[[ Line: 1911 ]]
-        if not hasObjectPermissionTo(v1166, "general.tactics_shooting", false) then
-            return outputLangString(v1166, "you_have_not_permissions");
+    resetWeaponProperty = function(resetAdmin, resetWeaponID) 
+        if not hasObjectPermissionTo(resetAdmin, "general.tactics_shooting", false) then
+            return outputLangString(resetAdmin, "you_have_not_permissions");
         else
-            setWeaponProperty(v1167, "pro", "weapon_range", getOriginalWeaponProperty(v1167, "pro", "weapon_range"));
-            setWeaponProperty(v1167, "pro", "target_range", getOriginalWeaponProperty(v1167, "pro", "target_range"));
-            setWeaponProperty(v1167, "pro", "accuracy", getOriginalWeaponProperty(v1167, "pro", "accuracy"));
-            setWeaponProperty(v1167, "pro", "damage", getOriginalWeaponProperty(v1167, "pro", "damage"));
-            setWeaponProperty(v1167, "pro", "maximum_clip_ammo", getOriginalWeaponProperty(v1167, "pro", "maximum_clip_ammo"));
-            setWeaponProperty(v1167, "pro", "move_speed", getOriginalWeaponProperty(v1167, "pro", "move_speed"));
-            setWeaponProperty(v1167, "pro", "anim_loop_start", getOriginalWeaponProperty(v1167, "pro", "anim_loop_start"));
-            setWeaponProperty(v1167, "pro", "anim_loop_stop", getOriginalWeaponProperty(v1167, "pro", "anim_loop_stop"));
-            setWeaponProperty(v1167, "pro", "anim_loop_bullet_fire", getOriginalWeaponProperty(v1167, "pro", "anim_loop_bullet_fire"));
-            setWeaponProperty(v1167, "pro", "anim2_loop_start", getOriginalWeaponProperty(v1167, "pro", "anim2_loop_start"));
-            setWeaponProperty(v1167, "pro", "anim2_loop_stop", getOriginalWeaponProperty(v1167, "pro", "anim2_loop_stop"));
-            setWeaponProperty(v1167, "pro", "anim2_loop_bullet_fire", getOriginalWeaponProperty(v1167, "pro", "anim2_loop_bullet_fire"));
-            setWeaponProperty(v1167, "pro", "anim_breakout_time", getOriginalWeaponProperty(v1167, "pro", "anim_breakout_time"));
-            local v1168 = string.reverse(string.format("%04X", getOriginalWeaponProperty(v1167, "pro", "flags")));
-            local v1169 = string.reverse(string.format("%04X", getWeaponProperty(v1167, "pro", "flags")));
-            local v1170 = {
+            setWeaponProperty(resetWeaponID, "pro", "weapon_range", getOriginalWeaponProperty(resetWeaponID, "pro", "weapon_range"));
+            setWeaponProperty(resetWeaponID, "pro", "target_range", getOriginalWeaponProperty(resetWeaponID, "pro", "target_range"));
+            setWeaponProperty(resetWeaponID, "pro", "accuracy", getOriginalWeaponProperty(resetWeaponID, "pro", "accuracy"));
+            setWeaponProperty(resetWeaponID, "pro", "damage", getOriginalWeaponProperty(resetWeaponID, "pro", "damage"));
+            setWeaponProperty(resetWeaponID, "pro", "maximum_clip_ammo", getOriginalWeaponProperty(resetWeaponID, "pro", "maximum_clip_ammo"));
+            setWeaponProperty(resetWeaponID, "pro", "move_speed", getOriginalWeaponProperty(resetWeaponID, "pro", "move_speed"));
+            setWeaponProperty(resetWeaponID, "pro", "anim_loop_start", getOriginalWeaponProperty(resetWeaponID, "pro", "anim_loop_start"));
+            setWeaponProperty(resetWeaponID, "pro", "anim_loop_stop", getOriginalWeaponProperty(resetWeaponID, "pro", "anim_loop_stop"));
+            setWeaponProperty(resetWeaponID, "pro", "anim_loop_bullet_fire", getOriginalWeaponProperty(resetWeaponID, "pro", "anim_loop_bullet_fire"));
+            setWeaponProperty(resetWeaponID, "pro", "anim2_loop_start", getOriginalWeaponProperty(resetWeaponID, "pro", "anim2_loop_start"));
+            setWeaponProperty(resetWeaponID, "pro", "anim2_loop_stop", getOriginalWeaponProperty(resetWeaponID, "pro", "anim2_loop_stop"));
+            setWeaponProperty(resetWeaponID, "pro", "anim2_loop_bullet_fire", getOriginalWeaponProperty(resetWeaponID, "pro", "anim2_loop_bullet_fire"));
+            setWeaponProperty(resetWeaponID, "pro", "anim_breakout_time", getOriginalWeaponProperty(resetWeaponID, "pro", "anim_breakout_time"));
+            local originalFlagsStr = string.reverse(string.format("%04X", getOriginalWeaponProperty(resetWeaponID, "pro", "flags")));
+            local currentFlagsStr2 = string.reverse(string.format("%04X", getWeaponProperty(resetWeaponID, "pro", "flags")));
+            local originalFlagBits = {
                 {}, 
                 {}, 
                 {}, 
                 {}, 
                 {}
             };
-            for v1171 = 1, 4 do
-                local v1172 = tonumber(string.sub(v1168, v1171, v1171), 16);
-                if v1172 then
-                    for v1173 = 3, 0, -1 do
-                        local v1174 = 2 ^ v1173;
-                        if v1174 <= v1172 then
-                            v1170[v1171][v1174] = true;
-                            v1172 = v1172 - v1174;
+            for flagGroupIndex2 = 1, 4 do
+                local originalHex = tonumber(string.sub(originalFlagsStr, flagGroupIndex2, flagGroupIndex2), 16);
+                if originalHex then
+                    for bitPos3 = 3, 0, -1 do
+                        local bitValue3 = 2 ^ bitPos3;
+                        if bitValue3 <= originalHex then
+                            originalFlagBits[flagGroupIndex2][bitValue3] = true;
+                            originalHex = originalHex - bitValue3;
                         else
-                            v1170[v1171][v1174] = false;
+                            originalFlagBits[flagGroupIndex2][bitValue3] = false;
                         end;
                     end;
                 else
-                    v1170[v1171][1] = false;
-                    v1170[v1171][2] = false;
-                    v1170[v1171][4] = false;
-                    v1170[v1171][8] = false;
+                    originalFlagBits[flagGroupIndex2][1] = false;
+                    originalFlagBits[flagGroupIndex2][2] = false;
+                    originalFlagBits[flagGroupIndex2][4] = false;
+                    originalFlagBits[flagGroupIndex2][8] = false;
                 end;
             end;
-            for v1175 = 1, 4 do
-                local v1176 = tonumber(string.sub(v1169, v1175, v1175), 16);
-                if v1176 then
-                    for v1177 = 3, 0, -1 do
-                        local v1178 = 2 ^ v1177;
-                        if v1178 <= v1176 then
-                            if not v1170[v1175][v1178] then
-                                setWeaponProperty(v1167, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1175) .. tostring(v1178) .. string.rep("0", v1175 - 1)));
+            for flagGroupIndex3 = 1, 4 do
+                local currentHex2 = tonumber(string.sub(currentFlagsStr2, flagGroupIndex3, flagGroupIndex3), 16);
+                if currentHex2 then
+                    for bitPos4 = 3, 0, -1 do
+                        local bitValue4 = 2 ^ bitPos4;
+                        if bitValue4 <= currentHex2 then
+                            if not originalFlagBits[flagGroupIndex3][bitValue4] then
+                                setWeaponProperty(resetWeaponID, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex3) .. tostring(bitValue4) .. string.rep("0", flagGroupIndex3 - 1)));
                             end;
-                            v1176 = v1176 - v1178;
-                        elseif v1170[v1175][v1178] then
-                            setWeaponProperty(v1167, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1175) .. tostring(v1178) .. string.rep("0", v1175 - 1)));
+                            currentHex2 = currentHex2 - bitValue4;
+                        elseif originalFlagBits[flagGroupIndex3][bitValue4] then
+                            setWeaponProperty(resetWeaponID, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex3) .. tostring(bitValue4) .. string.rep("0", flagGroupIndex3 - 1)));
                         end;
                     end;
                 else
-                    if v1170[v1175][8] then
-                        setWeaponProperty(v1167, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1175) .. "8" .. string.rep("0", v1175 - 1)));
+                    if originalFlagBits[flagGroupIndex3][8] then
+                        setWeaponProperty(resetWeaponID, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex3) .. "8" .. string.rep("0", flagGroupIndex3 - 1)));
                     end;
-                    if v1170[v1175][4] then
-                        setWeaponProperty(v1167, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1175) .. "4" .. string.rep("0", v1175 - 1)));
+                    if originalFlagBits[flagGroupIndex3][4] then
+                        setWeaponProperty(resetWeaponID, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex3) .. "4" .. string.rep("0", flagGroupIndex3 - 1)));
                     end;
-                    if v1170[v1175][2] then
-                        setWeaponProperty(v1167, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1175) .. "2" .. string.rep("0", v1175 - 1)));
+                    if originalFlagBits[flagGroupIndex3][2] then
+                        setWeaponProperty(resetWeaponID, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex3) .. "2" .. string.rep("0", flagGroupIndex3 - 1)));
                     end;
-                    if v1170[v1175][1] then
-                        setWeaponProperty(v1167, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - v1175) .. "1" .. string.rep("0", v1175 - 1)));
+                    if originalFlagBits[flagGroupIndex3][1] then
+                        setWeaponProperty(resetWeaponID, "pro", "flags", tonumber("0x" .. string.rep("0", 6 - flagGroupIndex3) .. "1" .. string.rep("0", flagGroupIndex3 - 1)));
                     end;
                 end;
             end;
-            return callClientFunction(v1166, "refreshWeaponProperties");
+            return callClientFunction(resetAdmin, "refreshWeaponProperties");
         end;
     end;
-    addAnticheatModsearch = function(v1179, v1180, v1181) --[[ Line: 1973 ]]
-        local v1182 = getTacticsData("anticheat", "modslist") or {};
-        table.insert(v1182, {
-            name = v1179, 
-            search = v1180, 
-            type = v1181
+    addAnticheatModsearch = function(modName, modSearch, modType) 
+        local modsList2 = getTacticsData("anticheat", "modslist") or {};
+        table.insert(modsList2, {
+            name = modName, 
+            search = modSearch, 
+            type = modType
         });
-        setTacticsData(v1182, "anticheat", "modslist");
+        setTacticsData(modsList2, "anticheat", "modslist");
     end;
-    setAnticheatModsearch = function(v1183, v1184, v1185, v1186) --[[ Line: 1978 ]]
-        local v1187 = getTacticsData("anticheat", "modslist") or {};
-        if not v1187[v1183 + 1] then
+    setAnticheatModsearch = function(modIndex, newModName, newModSearch, newModType) 
+        local modsList3 = getTacticsData("anticheat", "modslist") or {};
+        if not modsList3[modIndex + 1] then
             return;
         else
-            v1187[v1183 + 1] = {
-                name = v1184, 
-                search = v1185, 
-                type = v1186
+            modsList3[modIndex + 1] = {
+                name = newModName, 
+                search = newModSearch, 
+                type = newModType
             };
-            setTacticsData(v1187, "anticheat", "modslist");
+            setTacticsData(modsList3, "anticheat", "modslist");
             return;
         end;
     end;
-    removeAnticheatModsearch = function(v1188) --[[ Line: 1984 ]]
-        local v1189 = getTacticsData("anticheat", "modslist") or {};
-        table.remove(v1189, v1188 + 1);
-        setTacticsData(v1189, "anticheat", "modslist");
+    removeAnticheatModsearch = function(removeModIndex) 
+        local modsList4 = getTacticsData("anticheat", "modslist") or {};
+        table.remove(modsList4, removeModIndex + 1);
+        setTacticsData(modsList4, "anticheat", "modslist");
     end;
-    changeVehicleHandling = function(v1190, v1191, v1192) --[[ Line: 1989 ]]
-        if not hasObjectPermissionTo(v1190, "general.tactics_handling", false) then
-            return outputLangString(v1190, "you_have_not_permissions");
+    changeVehicleHandling = function(handlingAdmin, vehicleModelID4, handlingChanges) 
+        if not hasObjectPermissionTo(handlingAdmin, "general.tactics_handling", false) then
+            return outputLangString(handlingAdmin, "you_have_not_permissions");
         else
-            local v1193 = getTacticsData("handlings") or {};
-            if not v1193[v1191] then
-                v1193[v1191] = {
+            local handlingTable = getTacticsData("handlings") or {};
+            if not handlingTable[vehicleModelID4] then
+                handlingTable[vehicleModelID4] = {
                     nil
                 };
             end;
-            local v1194 = getOriginalHandling(v1191);
-            for v1195, v1196 in pairs(v1192) do
-                if type(v1196) == "boolean" and v1194[v1195] == v1196 then
-                    v1193[v1191][v1195] = nil;
-                elseif v1195 == "sirens" then
-                    if v1196.count == 0 then
-                        v1193[v1191][v1195] = nil;
+            local originalHandling2 = getOriginalHandling(vehicleModelID4);
+            for handlingProp, handlingPropValue in pairs(handlingChanges) do
+                if type(handlingPropValue) == "boolean" and originalHandling2[handlingProp] == handlingPropValue then
+                    handlingTable[vehicleModelID4][handlingProp] = nil;
+                elseif handlingProp == "sirens" then
+                    if handlingPropValue.count == 0 then
+                        handlingTable[vehicleModelID4][handlingProp] = nil;
                     else
-                        v1193[v1191][v1195] = v1196;
+                        handlingTable[vehicleModelID4][handlingProp] = handlingPropValue;
                     end;
-                elseif type(v1196) == "table" and string.format("%.3f", v1194[v1195][1]) == string.format("%.3f", v1196[1]) and string.format("%.3f", v1194[v1195][2]) == string.format("%.3f", v1196[2]) and string.format("%.3f", v1194[v1195][3]) == string.format("%.3f", v1196[3]) then
-                    v1193[v1191][v1195] = nil;
-                elseif type(v1196) == "number" and string.format("%.3f", v1194[v1195]) == string.format("%.3f", v1196) then
-                    v1193[v1191][v1195] = nil;
-                elseif type(v1196) == "string" and (v1195 == "modelFlags" or v1195 == "handlingFlags") and string.format("0x%08X", v1194[v1195]) == v1196 then
-                    v1193[v1191][v1195] = nil;
-                elseif type(v1196) == "string" and v1194[v1195] == v1196 then
-                    v1193[v1191][v1195] = nil;
-                elseif v1196 ~= nil then
-                    v1193[v1191][v1195] = v1196;
+                elseif type(handlingPropValue) == "table" and string.format("%.3f", originalHandling2[handlingProp][1]) == string.format("%.3f", handlingPropValue[1]) and string.format("%.3f", originalHandling2[handlingProp][2]) == string.format("%.3f", handlingPropValue[2]) and string.format("%.3f", originalHandling2[handlingProp][3]) == string.format("%.3f", handlingPropValue[3]) then
+                    handlingTable[vehicleModelID4][handlingProp] = nil;
+                elseif type(handlingPropValue) == "number" and string.format("%.3f", originalHandling2[handlingProp]) == string.format("%.3f", handlingPropValue) then
+                    handlingTable[vehicleModelID4][handlingProp] = nil;
+                elseif type(handlingPropValue) == "string" and (handlingProp == "modelFlags" or handlingProp == "handlingFlags") and string.format("0x%08X", originalHandling2[handlingProp]) == handlingPropValue then
+                    handlingTable[vehicleModelID4][handlingProp] = nil;
+                elseif type(handlingPropValue) == "string" and originalHandling2[handlingProp] == handlingPropValue then
+                    handlingTable[vehicleModelID4][handlingProp] = nil;
+                elseif handlingPropValue ~= nil then
+                    handlingTable[vehicleModelID4][handlingProp] = handlingPropValue;
                 end;
             end;
-            setTacticsData(v1193, "handlings");
+            setTacticsData(handlingTable, "handlings");
             return;
         end;
     end;
-    resetVehicleHandling = function(v1197, v1198) --[[ Line: 2026 ]]
-        if not hasObjectPermissionTo(v1197, "general.tactics_handling", false) then
-            return outputLangString(v1197, "you_have_not_permissions");
+    resetVehicleHandling = function(resetHandlingAdmin, resetVehicleModel) 
+        if not hasObjectPermissionTo(resetHandlingAdmin, "general.tactics_handling", false) then
+            return outputLangString(resetHandlingAdmin, "you_have_not_permissions");
         else
-            local v1199 = getTacticsData("handlings") or {};
-            v1199[v1198] = nil;
-            setTacticsData(v1199, "handlings");
+            local handlingTable2 = getTacticsData("handlings") or {};
+            handlingTable2[resetVehicleModel] = nil;
+            setTacticsData(handlingTable2, "handlings");
             return;
         end;
     end;
-    onPlayerScreenShot = function(v1200, v1201, v1202, _, v1204) --[[ Line: 2034 ]]
-        if v1200 ~= getThisResource() and v1200 ~= "disabled" then
+    onPlayerScreenShot = function(screenshotResource, screenshotStatus, screenshotData, _, screenshotExtra) 
+        if screenshotResource ~= getThisResource() and screenshotResource ~= "disabled" then
             return;
         else
-            local v1205 = getRealTime();
-            local v1206, v1207, v1208, _ = unpack(split(v1204, " "));
-            local v1210 = string.format("%s_%04i-%02i-%02i_%02i-%02i-%02i", getPlayerName(source):gsub("[\\/:*?\"<>|]", "-"):gsub("-+", "-"):gsub("-$", ""):gsub("^-", ""), v1205.year + 1900, v1205.month + 1, v1205.monthday, v1205.hour, v1205.minute, v1205.second);
-            local v1211 = getPlayerFromName(v1206);
-            if not v1211 then
+            local currentTime = getRealTime();
+            local targetName, tagOne, tagTwo, _ = unpack(split(screenshotExtra, " "));
+            local fileName = string.format("%s_%04i-%02i-%02i_%02i-%02i-%02i", getPlayerName(source):gsub("[\\/:*?\"<>|]", "-"):gsub("-+", "-"):gsub("-$", ""):gsub("^-", ""), currentTime.year + 1900, currentTime.month + 1, currentTime.monthday, currentTime.hour, currentTime.minute, currentTime.second);
+            local targetPlayer4 = getPlayerFromName(targetName);
+            if not targetPlayer4 then
                 return;
-            elseif v1201 == "disabled" then
+            elseif screenshotStatus == "disabled" then
                 outputDebugString("takeDisabledScreenShot");
-                triggerClientEvent(source, "takeDisabledScreenShot", source, v1204);
+                triggerClientEvent(source, "takeDisabledScreenShot", source, screenshotExtra);
                 return;
             else
-                outputDebugString("2 = " .. #v1202);
-                triggerClientEvent(v1211, "onClientPlayerScreenShot", source, v1201, v1202, v1207, v1208, v1210);
+                outputDebugString("2 = " .. #screenshotData);
+                triggerClientEvent(targetPlayer4, "onClientPlayerScreenShot", source, screenshotStatus, screenshotData, tagOne, tagTwo, fileName);
                 return;
             end;
         end;
     end;
-    connectPlayers = function(v1212, v1213, v1214, v1215, v1216) --[[ Line: 2049 ]]
+    connectPlayers = function(connectAdmin, playersToConnect, serverIP, serverPort, serverPassword) 
         if not hasObjectPermissionTo(getThisResource(), "function.redirectPlayer", false) then
-            return outputLangString(v1212, "resource_have_not_permissions", getResourceName(getThisResource()), "function.redirectPlayer");
+            return outputLangString(connectAdmin, "resource_have_not_permissions", getResourceName(getThisResource()), "function.redirectPlayer");
         else
-            if v1214 and v1215 then
-                for _, v1218 in ipairs(v1213) do
-                    redirectPlayer(v1218, tostring(v1214), tonumber(v1215), v1216);
+            if serverIP and serverPort then
+                for _, playerToRedirect in ipairs(playersToConnect) do
+                    redirectPlayer(playerToRedirect, tostring(serverIP), tonumber(serverPort), serverPassword);
                 end;
             end;
             return;
@@ -4910,164 +4874,164 @@ end)();
     addEventHandler("onPlayerScreenShot", root, onPlayerScreenShot);
     addEventHandler("onPlayerDisabledScreenShot", root, onPlayerScreenShot);
 end)();
-(function(...) --[[ Line: 0 ]]
-    onTacticsChange = function(v1219, _) --[[ Line: 7 ]]
-        if v1219[1] == "anticheat" then
-            if v1219[2] == "mods" then
+(function(...) 
+    onTacticsChange = function(changePath, _) 
+        if changePath[1] == "anticheat" then
+            if changePath[2] == "mods" then
                 if getTacticsData("anticheat", "mods") == "true" then
                     addEventHandler("onPlayerModInfo", root, modifications_onPlayerModInfo);
-                    for _, v1222 in ipairs(getElementsByType("player")) do
-                        resendPlayerModInfo(v1222);
+                    for _, playerToCheckMods in ipairs(getElementsByType("player")) do
+                        resendPlayerModInfo(playerToCheckMods);
                     end;
                 else
                     removeEventHandler("onPlayerModInfo", root, modifications_onPlayerModInfo);
                 end;
             end;
-            if v1219[2] == "modslist" and getTacticsData("anticheat", "mods") == "true" then
-                for _, v1224 in ipairs(getElementsByType("player")) do
-                    resendPlayerModInfo(v1224);
+            if changePath[2] == "modslist" and getTacticsData("anticheat", "mods") == "true" then
+                for _, playerToResend in ipairs(getElementsByType("player")) do
+                    resendPlayerModInfo(playerToResend);
                 end;
             end;
         end;
     end;
     addEventHandler("onTacticsChange", root, onTacticsChange);
-    modifications_onPlayerModInfo = function(_, v1226) --[[ Line: 27 ]]
-        local v1227 = getTacticsData("anticheat", "modslist");
-        local v1228 = {};
-        local v1229 = {};
-        local v1230 = {};
-        for _, v1232 in ipairs(v1227) do
-            table.insert(v1228, {
-                search = v1232.search:gsub("*", ".+"), 
-                type = v1232.type
+    modifications_onPlayerModInfo = function(_, modInfoList) 
+        local modsList = getTacticsData("anticheat", "modslist");
+        local modPatterns = {};
+        local modCounts = {};
+        local modNames = {};
+        for _, modEntry in ipairs(modsList) do
+            table.insert(modPatterns, {
+                search = modEntry.search:gsub("*", ".+"), 
+                type = modEntry.type
             });
-            table.insert(v1229, 0);
-            table.insert(v1230, "");
+            table.insert(modCounts, 0);
+            table.insert(modNames, "");
         end;
-        local v1233 = false;
-        for _, v1235 in ipairs(v1226) do
-            for v1236, v1237 in ipairs(v1228) do
-                if string.match(v1235[v1237.type], v1237.search) then
-                    v1233 = true;
-                    v1229[v1236] = v1229[v1236] + 1;
-                    v1230[v1236] = v1235.name;
+        local hasModViolation = false;
+        for _, modInfo in ipairs(modInfoList) do
+            for patternIndex, patternData in ipairs(modPatterns) do
+                if string.match(modInfo[patternData.type], patternData.search) then
+                    hasModViolation = true;
+                    modCounts[patternIndex] = modCounts[patternIndex] + 1;
+                    modNames[patternIndex] = modInfo.name;
                 end;
             end;
         end;
-        if v1233 then
-            local v1238 = "";
-            for v1239 in ipairs(v1228) do
-                if v1229[v1239] > 0 then
-                    v1238 = v1238 .. string.format(" %i/%s", v1229[v1239], v1230[v1239]);
+        if hasModViolation then
+            local violationString = "";
+            for violationIndex in ipairs(modPatterns) do
+                if modCounts[violationIndex] > 0 then
+                    violationString = violationString .. string.format(" %i/%s", modCounts[violationIndex], modNames[violationIndex]);
                 end;
             end;
-            doPunishment(source, "Mods" .. v1238);
+            doPunishment(source, "Mods" .. violationString);
         end;
     end;
-    doPunishment = function(v1240, v1241) --[[ Line: 55 ]]
-        local v1242 = getTacticsData("anticheat", "action_detection");
-        if v1242 == "chat" then
-            outputLangString(root, "player_cheat_detected", getPlayerName(v1240), v1241);
-        elseif v1242 == "adminchat" then
-            for _, v1244 in ipairs(getElementsByType("player")) do
-                if hasObjectPermissionTo(v1244, "general.tactics_adminchat", false) then
-                    outputLangString(v1244, "player_cheat_detected", getPlayerName(v1240), v1241);
+    doPunishment = function(cheatPlayer, cheatType) 
+        local punishmentAction = getTacticsData("anticheat", "action_detection");
+        if punishmentAction == "chat" then
+            outputLangString(root, "player_cheat_detected", getPlayerName(cheatPlayer), cheatType);
+        elseif punishmentAction == "adminchat" then
+            for _, adminPlayer in ipairs(getElementsByType("player")) do
+                if hasObjectPermissionTo(adminPlayer, "general.tactics_adminchat", false) then
+                    outputLangString(adminPlayer, "player_cheat_detected", getPlayerName(cheatPlayer), cheatType);
                 end;
             end;
-        elseif v1242 == "kick" then
+        elseif punishmentAction == "kick" then
             if hasObjectPermissionTo(getThisResource(), "function.kickPlayer", false) then
-                kickPlayer(v1240, v1241);
+                kickPlayer(cheatPlayer, cheatType);
             else
-                for _, v1246 in ipairs(getElementsByType("player")) do
-                    if hasObjectPermissionTo(v1246, "general.tactics_adminchat", false) then
-                        outputLangString(v1246, "resource_have_not_permissions", getResourceName(getThisResource()), "function.kickPlayer");
+                for _, adminToNotify in ipairs(getElementsByType("player")) do
+                    if hasObjectPermissionTo(adminToNotify, "general.tactics_adminchat", false) then
+                        outputLangString(adminToNotify, "resource_have_not_permissions", getResourceName(getThisResource()), "function.kickPlayer");
                     end;
                 end;
             end;
         end;
     end;
 end)();
-(function(...) --[[ Line: 0 ]]
-    pickupWeapon = function(v1247, v1248) --[[ Line: 7 ]]
-        if not isElement(v1248) then
+(function(...) 
+    pickupWeapon = function(playerPickup, weaponPickup) 
+        if not isElement(weaponPickup) then
             return;
-        elseif triggerEvent("onWeaponPickup", v1247, v1248) == false then
+        elseif triggerEvent("onWeaponPickup", playerPickup, weaponPickup) == false then
             return;
         else
-            local v1249 = getPickupWeapon(v1248);
-            local v1250 = getPickupAmmo(v1248);
-            local v1251 = getElementData(v1248, "Clip");
-            destroyElement(v1248);
-            giveWeapon(v1247, v1249, v1250, true);
-            if v1251 then
-                setWeaponAmmo(v1247, v1249, v1250, v1251);
+            local pickupWeaponID = getPickupWeapon(weaponPickup);
+            local pickupAmmo = getPickupAmmo(weaponPickup);
+            local pickupClip = getElementData(weaponPickup, "Clip");
+            destroyElement(weaponPickup);
+            giveWeapon(playerPickup, pickupWeaponID, pickupAmmo, true);
+            if pickupClip then
+                setWeaponAmmo(playerPickup, pickupWeaponID, pickupAmmo, pickupClip);
             end;
             return;
         end;
     end;
-    replaceWeapon = function(v1252, v1253, v1254) --[[ Line: 18 ]]
-        if not isElement(v1253) then
+    replaceWeapon = function(playerReplace, replacePickup, weaponSlot) 
+        if not isElement(replacePickup) then
             return;
-        elseif triggerEvent("onWeaponPickup", v1252, v1253) == false then
+        elseif triggerEvent("onWeaponPickup", playerReplace, replacePickup) == false then
             return;
         else
-            local v1255 = getPedWeapon(v1252, v1254);
-            local v1256 = getPedTotalAmmo(v1252, v1254);
-            local v1257 = getPedAmmoInClip(v1252, v1254);
-            if v1255 > 0 then
-                local v1258 = createWeaponUnderPlayer(v1252, v1255, v1256, v1257);
-                if triggerEvent("onWeaponDrop", v1252, v1258) == false then
-                    if isElement(v1258) then
-                        destroyElement(v1258);
+            local currentWeapon = getPedWeapon(playerReplace, weaponSlot);
+            local currentAmmo = getPedTotalAmmo(playerReplace, weaponSlot);
+            local currentClip = getPedAmmoInClip(playerReplace, weaponSlot);
+            if currentWeapon > 0 then
+                local droppedWeapon = createWeaponUnderPlayer(playerReplace, currentWeapon, currentAmmo, currentClip);
+                if triggerEvent("onWeaponDrop", playerReplace, droppedWeapon) == false then
+                    if isElement(droppedWeapon) then
+                        destroyElement(droppedWeapon);
                     end;
                     return;
                 else
-                    takeWeapon(v1252, v1255);
+                    takeWeapon(playerReplace, currentWeapon);
                 end;
             end;
-            local v1259 = getPickupWeapon(v1253);
-            local v1260 = getPickupAmmo(v1253);
-            local v1261 = getElementData(v1253, "Clip");
-            destroyElement(v1253);
-            giveWeapon(v1252, v1259, v1260, true);
-            if v1261 then
-                setWeaponAmmo(v1252, v1259, v1260, v1261);
+            local newPickupWeapon = getPickupWeapon(replacePickup);
+            local newPickupAmmo = getPickupAmmo(replacePickup);
+            local newPickupClip = getElementData(replacePickup, "Clip");
+            destroyElement(replacePickup);
+            giveWeapon(playerReplace, newPickupWeapon, newPickupAmmo, true);
+            if newPickupClip then
+                setWeaponAmmo(playerReplace, newPickupWeapon, newPickupAmmo, newPickupClip);
             end;
             return;
         end;
     end;
-    dropWeapon = function(v1262, v1263) --[[ Line: 41 ]]
-        local v1264 = getPedWeapon(v1262, v1263);
-        local v1265 = getPedTotalAmmo(v1262, v1263);
-        local v1266 = getPedAmmoInClip(v1262, v1263);
-        if v1264 > 0 then
-            local v1267 = createWeaponUnderPlayer(v1262, v1264, v1265, v1266);
-            if triggerEvent("onWeaponDrop", v1262, v1267) == false then
-                if isElement(v1267) then
-                    destroyElement(v1267);
+    dropWeapon = function(playerDrop, dropSlot) 
+        local dropWeaponID = getPedWeapon(playerDrop, dropSlot);
+        local dropAmmo = getPedTotalAmmo(playerDrop, dropSlot);
+        local dropClip = getPedAmmoInClip(playerDrop, dropSlot);
+        if dropWeaponID > 0 then
+            local createdPickup = createWeaponUnderPlayer(playerDrop, dropWeaponID, dropAmmo, dropClip);
+            if triggerEvent("onWeaponDrop", playerDrop, createdPickup) == false then
+                if isElement(createdPickup) then
+                    destroyElement(createdPickup);
                 end;
             else
-                takeWeapon(v1262, v1264);
+                takeWeapon(playerDrop, dropWeaponID);
             end;
         end;
     end;
-    createWeaponUnderPlayer = function(v1268, v1269, v1270, v1271) --[[ Line: 55 ]]
-        if v1269 > 0 and v1270 > 0 and v1271 then
-            local v1272, v1273, v1274 = getElementPosition(v1268);
-            local v1275 = createPickup(v1272 + 0.2 * math.random(-5, 5), v1273 + 0.2 * math.random(-5, 5), v1274 - 0.5, 2, v1269, 0, v1270);
-            setElementParent(v1275, getRoundMapDynamicRoot());
-            setElementData(v1275, "Clip", v1271);
-            setElementInterior(v1275, getElementInterior(v1268));
-            setElementDimension(v1275, getElementDimension(v1268));
-            return v1275;
+    createWeaponUnderPlayer = function(weaponPlayer, createWeaponID, createAmmo, createClip) 
+        if createWeaponID > 0 and createAmmo > 0 and createClip then
+            local playerPosX2, playerPosY2, playerPosZ2 = getElementPosition(weaponPlayer);
+            local weaponPickupElement = createPickup(playerPosX2 + 0.2 * math.random(-5, 5), playerPosY2 + 0.2 * math.random(-5, 5), playerPosZ2 - 0.5, 2, createWeaponID, 0, createAmmo);
+            setElementParent(weaponPickupElement, getRoundMapDynamicRoot());
+            setElementData(weaponPickupElement, "Clip", createClip);
+            setElementInterior(weaponPickupElement, getElementInterior(weaponPlayer));
+            setElementDimension(weaponPickupElement, getElementDimension(weaponPlayer));
+            return weaponPickupElement;
         else
             return false;
         end;
     end;
-    onPlayerWasted = function(_, _, _, _, _) --[[ Line: 67 ]]
+    onPlayerWasted = function(_, _, _, _, _) 
         dropWeapon(source);
     end;
-    onPickupUse = function(_) --[[ Line: 70 ]]
+    onPickupUse = function(_) 
         cancelEvent();
     end;
     addEvent("onWeaponDrop");
@@ -5075,69 +5039,67 @@ end)();
     addEventHandler("onPlayerWasted", root, onPlayerWasted);
     addEventHandler("onPickupUse", root, onPickupUse);
 end)();
-(function(...) --[[ Line: 0 ]]
-    local v1282 = {};
-    setTabboardColumns = function(v1283) --[[ Line: 8 ]]
-        -- upvalues: v1282 (ref)
-        if not v1283 then
-            v1283 = {};
+(function(...) 
+    local tabboardColumns = {};
+    setTabboardColumns = function(columnsData) 
+        if not columnsData then
+            columnsData = {};
         end;
-        v1282 = v1283;
-        triggerClientEvent(root, "onClientTabboardChange", root, v1283);
+        tabboardColumns = columnsData;
+        triggerClientEvent(root, "onClientTabboardChange", root, columnsData);
     end;
-    onPlayerDownloadComplete = function() --[[ Line: 13 ]]
-        -- upvalues: v1282 (ref)
-        triggerClientEvent(client, "onClientTabboardChange", root, v1282, getServerName(), getMaxPlayers(), getVersion());
+    onPlayerDownloadComplete = function() 
+        triggerClientEvent(client, "onClientTabboardChange", root, tabboardColumns, getServerName(), getMaxPlayers(), getVersion());
     end;
-    getElementStat = function(v1284, v1285) --[[ Line: 16 ]]
-        if not isElement(v1284) or getElementType(v1284) ~= "player" and getElementType(v1284) ~= "team" then
+    getElementStat = function(elementToGetStat, statKey) 
+        if not isElement(elementToGetStat) or getElementType(elementToGetStat) ~= "player" and getElementType(elementToGetStat) ~= "team" then
             return false;
         else
-            local v1286 = getElementData(v1284, v1285);
-            if type(v1286) == "nil" then
-                v1286 = 0;
+            local statValue = getElementData(elementToGetStat, statKey);
+            if type(statValue) == "nil" then
+                statValue = 0;
             end;
-            if type(v1286) ~= "number" then
+            if type(statValue) ~= "number" then
                 return false;
             else
-                return v1286;
+                return statValue;
             end;
         end;
     end;
-    setElementStat = function(v1287, v1288, v1289) --[[ Line: 23 ]]
-        if not isElement(v1287) or getElementType(v1287) ~= "player" and getElementType(v1287) ~= "team" then
+    setElementStat = function(elementToSetStat, setStatKey, setStatValue) 
+        if not isElement(elementToSetStat) or getElementType(elementToSetStat) ~= "player" and getElementType(elementToSetStat) ~= "team" then
             return false;
         else
-            local v1290 = getElementData(v1287, v1288);
-            if type(v1290) == "nil" then
-                v1290 = 0;
+            local currentStatValue = getElementData(elementToSetStat, setStatKey);
+            if type(currentStatValue) == "nil" then
+                currentStatValue = 0;
             end;
-            if type(v1290) ~= "number" then
+            if type(currentStatValue) ~= "number" then
                 return false;
             else
-                return setElementData(v1287, v1290, v1289);
+                return setElementData(elementToSetStat, currentStatValue, setStatValue);
             end;
         end;
     end;
-    giveElementStat = function(v1291, v1292, v1293) --[[ Line: 30 ]]
-        if not isElement(v1291) or getElementType(v1291) ~= "player" and getElementType(v1291) ~= "team" then
+    giveElementStat = function(elementToGiveStat, giveStatKey, giveStatValue) 
+        if not isElement(elementToGiveStat) or getElementType(elementToGiveStat) ~= "player" and getElementType(elementToGiveStat) ~= "team" then
             return false;
         else
-            local v1294 = getElementData(v1291, v1292);
-            if type(v1294) == "nil" then
-                v1294 = 0;
+            local existingStatValue = getElementData(elementToGiveStat, giveStatKey);
+            if type(existingStatValue) == "nil" then
+                existingStatValue = 0;
             end;
-            if type(v1294) ~= "number" then
+            if type(existingStatValue) ~= "number" then
                 return false;
             else
-                return setElementData(v1291, v1294, v1294 + v1293);
+                return setElementData(elementToGiveStat, existingStatValue, existingStatValue + giveStatValue);
             end;
         end;
     end;
     addEventHandler("onPlayerDownloadComplete", root, onPlayerDownloadComplete);
 end)();
-(function(...) --[[ Line: 0 ]]
-    local v1295 = {
+(function(...) 
+    local validProperties = {
         invulnerable = true, 
         invisible = true, 
         freezable = true, 
@@ -5146,185 +5108,179 @@ end)();
         regenerable = true, 
         wallhack = true
     };
-    setPlayerProperty = function(v1296, v1297, v1298) --[[ Line: 14 ]]
-        -- upvalues: v1295 (ref)
-        if not v1295[v1297] then
+    setPlayerProperty = function(propertyPlayer, propertyName, propertyValue) 
+        if not validProperties[propertyName] then
             return false;
         else
-            local v1299 = getElementData(v1296, "Properties") or {};
-            if v1298 ~= nil and v1298 ~= false then
-                v1299[v1297] = v1298;
+            local playerProperties = getElementData(propertyPlayer, "Properties") or {};
+            if propertyValue ~= nil and propertyValue ~= false then
+                playerProperties[propertyName] = propertyValue;
             else
-                v1299[v1297] = nil;
+                playerProperties[propertyName] = nil;
             end;
-            return setElementData(v1296, "Properties", v1299);
+            return setElementData(propertyPlayer, "Properties", playerProperties);
         end;
     end;
-    givePlayerProperty = function(v1300, v1301, v1302, v1303) --[[ Line: 24 ]]
-        -- upvalues: v1295 (ref)
-        if not v1295[v1301] then
+    givePlayerProperty = function(givePropertyPlayer, givePropertyName, givePropertyValue, givePropertyTime) 
+        if not validProperties[givePropertyName] then
             return false;
         else
-            local v1304 = getElementData(v1300, "Properties") or {};
-            if v1302 ~= nil and v1302 ~= false then
-                v1304[v1301] = {
-                    v1302, 
-                    v1303
+            local playerProperties2 = getElementData(givePropertyPlayer, "Properties") or {};
+            if givePropertyValue ~= nil and givePropertyValue ~= false then
+                playerProperties2[givePropertyName] = {
+                    givePropertyValue, 
+                    givePropertyTime
                 };
             else
-                v1304[v1301] = nil;
+                playerProperties2[givePropertyName] = nil;
             end;
-            return setElementData(v1300, "Properties", v1304);
+            return setElementData(givePropertyPlayer, "Properties", playerProperties2);
         end;
     end;
-    getPlayerProperty = function(v1305, v1306) --[[ Line: 34 ]]
-        -- upvalues: v1295 (ref)
-        if not v1305 or not isElement(v1305) or not v1295[v1306] then
+    getPlayerProperty = function(getPropertyPlayer, getPropertyName) 
+        if not getPropertyPlayer or not isElement(getPropertyPlayer) or not validProperties[getPropertyName] then
             return false;
         else
-            local v1307 = getElementData(v1305, "Properties") or {};
-            if type(v1307[v1306]) == "table" then
-                return unpack(v1307[v1306]);
+            local propertyTable = getElementData(getPropertyPlayer, "Properties") or {};
+            if type(propertyTable[getPropertyName]) == "table" then
+                return unpack(propertyTable[getPropertyName]);
             else
-                return v1307[v1306];
+                return propertyTable[getPropertyName];
             end;
         end;
     end;
 end)();
-(function(...) --[[ Line: 0 ]]
-    local v1308 = nil;
-    local v1309 = {};
-    local function v1312(v1310) --[[ Line: 9 ]]
-        local v1311 = getResourceFromName(v1310.resname);
-        if v1311 then
+(function(...) 
+    local votingTimer = nil;
+    local votingFunctions = {};
+    local function executeVoteResult(voteResult) 
+        local votedResource = getResourceFromName(voteResult.resname);
+        if votedResource then
             setTacticsData(nil, "voting");
             if getTacticsData("Map") == "lobby" then
-                startMap(v1311, "vote");
+                startMap(votedResource, "vote");
             elseif getTacticsData("automatics") == "voting" and winTimer == "voting" then
-                startMap(v1311, "vote");
+                startMap(votedResource, "vote");
             else
-                setTacticsData(v1310.resname, "ResourceNext");
-                outputLangString(root, "map_set_next", v1310.label);
+                setTacticsData(voteResult.resname, "ResourceNext");
+                outputLangString(root, "map_set_next", voteResult.label);
             end;
             return true;
         else
             return false;
         end;
     end;
-    createVoting = function(v1313, v1314) --[[ Line: 25 ]]
-        -- upvalues: v1308 (ref), v1309 (ref)
-        local v1315 = getTacticsData("voting");
-        if v1315 and v1315.finish and v1315.finish < getTickCount() then
-            if isTimer(v1308) then
-                killTimer(v1308);
+    createVoting = function(voteOptionsList, voteName) 
+        local currentVote = getTacticsData("voting");
+        if currentVote and currentVote.finish and currentVote.finish < getTickCount() then
+            if isTimer(votingTimer) then
+                killTimer(votingTimer);
             end;
             setTacticsData(nil, "voting");
-        elseif not v1315 then
-            local v1316 = TimeToSec(getTacticsData("settings", "vote_duration") or "0:20");
-            v1309 = {};
-            for v1317 in ipairs(v1313) do
-                table.insert(v1309, v1313[v1317].func);
-                v1313[v1317].num = v1317;
+        elseif not currentVote then
+            local voteDurationSec = TimeToSec(getTacticsData("settings", "vote_duration") or "0:20");
+            votingFunctions = {};
+            for optionIndex in ipairs(voteOptionsList) do
+                table.insert(votingFunctions, voteOptionsList[optionIndex].func);
+                voteOptionsList[optionIndex].num = optionIndex;
             end;
-            v1315 = {
-                rows = v1313, 
+            currentVote = {
+                rows = voteOptionsList, 
                 cancel = 0, 
-                finish = getTickCount() + v1316 * 1000, 
-                name = v1314
+                finish = getTickCount() + voteDurationSec * 1000, 
+                name = voteName
             };
-            if isTimer(v1308) then
-                killTimer(v1308);
+            if isTimer(votingTimer) then
+                killTimer(votingTimer);
             end;
-            v1308 = setTimer(onVotingFinish, v1316 * 1000, 1, v1314);
-            setTacticsData(v1315, "voting");
+            votingTimer = setTimer(onVotingFinish, voteDurationSec * 1000, 1, voteName);
+            setTacticsData(currentVote, "voting");
             return true;
         end;
         return false;
     end;
-    stopVoting = function(v1318) --[[ Line: 45 ]]
-        -- upvalues: v1308 (ref)
-        if not getTacticsData("voting") or type(v1318) == "userdata" and not hasObjectPermissionTo(v1318, "general.tactics_maps", false) then
+    stopVoting = function(stopVoteSource) 
+        if not getTacticsData("voting") or type(stopVoteSource) == "userdata" and not hasObjectPermissionTo(stopVoteSource, "general.tactics_maps", false) then
             return false;
-        elseif type(v1318) == "string" and v1318 ~= getTacticsData("voting").name then
+        elseif type(stopVoteSource) == "string" and stopVoteSource ~= getTacticsData("voting").name then
             return false;
         else
-            if isTimer(v1308) then
-                killTimer(v1308);
+            if isTimer(votingTimer) then
+                killTimer(votingTimer);
             end;
             setTacticsData(nil, "voting");
             outputLangString(root, "voting_canceled");
             return true;
         end;
     end;
-    getVotingInfo = function() --[[ Line: 53 ]]
+    getVotingInfo = function() 
         return getTacticsData("voting") or {};
     end;
-    onPlayerVote = function(v1319, v1320, v1321) --[[ Line: 56 ]]
+    onPlayerVote = function(voteData, previousVote, voteIdentifier) 
         if source ~= client then return end
-        -- upvalues: v1308 (ref), v1309 (ref), v1312 (ref)
-        local v1322 = getElementType(source) == "player" and getPlayerName(source) or getElementType(source) == "team" and getTeamName(source) or "Console";
-        local v1323 = getTacticsData("voting");
-        if v1321 ~= nil and v1323 and v1321 ~= v1323.name then
+        local voterName = getElementType(source) == "player" and getPlayerName(source) or getElementType(source) == "team" and getTeamName(source) or "Console";
+        local voteInfo = getTacticsData("voting");
+        if voteIdentifier ~= nil and voteInfo and voteIdentifier ~= voteInfo.name then
             return;
-        elseif v1323 and v1323.finish and v1323.finish < getTickCount() then
-            if isTimer(v1308) then
-                killTimer(v1308);
+        elseif voteInfo and voteInfo.finish and voteInfo.finish < getTickCount() then
+            if isTimer(votingTimer) then
+                killTimer(votingTimer);
             end;
             return setTacticsData(nil, "voting");
         else
-            if not v1319 then
-                v1323 = getTacticsData("voting");
-                if v1323 and v1323.rows and #v1323.rows > 0 and v1323.cancel then
-                    if v1320 and v1320 > 0 then
-                        v1323.rows[v1320].votes = v1323.rows[v1320].votes - 1;
+            if not voteData then
+                voteInfo = getTacticsData("voting");
+                if voteInfo and voteInfo.rows and #voteInfo.rows > 0 and voteInfo.cancel then
+                    if previousVote and previousVote > 0 then
+                        voteInfo.rows[previousVote].votes = voteInfo.rows[previousVote].votes - 1;
                     end;
-                    if v1320 == 0 then
-                        v1323.cancel = v1323.cancel - 1;
+                    if previousVote == 0 then
+                        voteInfo.cancel = voteInfo.cancel - 1;
                     end;
-                    return setTacticsData(v1323, "voting");
+                    return setTacticsData(voteInfo, "voting");
                 end;
-            elseif type(v1319) == "table" then
-                v1323 = getTacticsData("voting");
-                local v1324 = TimeToSec(getTacticsData("settings", "vote_duration") or "0:20");
-                local v1325 = "";
-                local v1326 = getTacticsData("map_disabled") or {};
-                for _, v1328 in ipairs(v1319) do
-                    local v1329, _ = unpack(v1328);
-                    local v1331 = "";
-                    local v1332 = "";
-                    if string.find(v1329, "_") ~= nil then
-                        v1332 = string.lower(string.sub(v1329, 1, string.find(v1329, "_") - 1));
+            elseif type(voteData) == "table" then
+                voteInfo = getTacticsData("voting");
+                local voteTimeSec = TimeToSec(getTacticsData("settings", "vote_duration") or "0:20");
+                local voteOptionsText = "";
+                local disabledMapsTable3 = getTacticsData("map_disabled") or {};
+                for _, voteOption in ipairs(voteData) do
+                    local resourceNameVote, _ = unpack(voteOption);
+                    local displayName = "";
+                    local modeNameVote = "";
+                    if string.find(resourceNameVote, "_") ~= nil then
+                        modeNameVote = string.lower(string.sub(resourceNameVote, 1, string.find(resourceNameVote, "_") - 1));
                     end;
-                    local v1333 = getResourceFromName(v1329);
-                    if v1333 and #v1332 > 0 and getTacticsData("modes", v1332, "enable") ~= "false" and not v1326[v1329] then
-                        v1331 = getResourceInfo(v1333, "name");
-                        if not v1331 then
-                            v1331 = string.sub(string.gsub(getResourceName(v1333), "_", " "), #v1332 + 2);
-                            if #v1331 > 1 then
-                                v1331 = string.upper(string.sub(v1331, 1, 1)) .. string.sub(v1331, 2);
+                    local voteResource = getResourceFromName(resourceNameVote);
+                    if voteResource and #modeNameVote > 0 and getTacticsData("modes", modeNameVote, "enable") ~= "false" and not disabledMapsTable3[resourceNameVote] then
+                        displayName = getResourceInfo(voteResource, "name");
+                        if not displayName then
+                            displayName = string.sub(string.gsub(getResourceName(voteResource), "_", " "), #modeNameVote + 2);
+                            if #displayName > 1 then
+                                displayName = string.upper(string.sub(displayName, 1, 1)) .. string.sub(displayName, 2);
                             end;
                         end;
-                        v1331 = string.upper(string.sub(v1332, 1, 1)) .. string.sub(v1332, 2) .. ": " .. v1331;
-                    elseif v1322 ~= "Console" then
+                        displayName = string.upper(string.sub(modeNameVote, 1, 1)) .. string.sub(modeNameVote, 2) .. ": " .. displayName;
+                    elseif voterName ~= "Console" then
                         outputLangString(source, "voting_notexist");
                         return;
                     end;
-                    if v1323 and v1323.rows and #v1323.rows > 0 and v1323.cancel then
-                        if #v1323.rows > 8 then
+                    if voteInfo and voteInfo.rows and #voteInfo.rows > 0 and voteInfo.cancel then
+                        if #voteInfo.rows > 8 then
                             return;
                         else
-                            for _, v1335 in ipairs(v1323.rows) do
-                                if v1335[1] == v1329 then
+                            for _, existingRow in ipairs(voteInfo.rows) do
+                                if existingRow[1] == resourceNameVote then
                                     return;
                                 end;
                             end;
-                            table.insert(v1309, v1312);
-                            table.insert(v1323.rows, {
-                                resname = v1329, 
+                            table.insert(votingFunctions, executeVoteResult);
+                            table.insert(voteInfo.rows, {
+                                resname = resourceNameVote, 
                                 votes = 0, 
-                                cteator = v1322, 
-                                label = v1331, 
-                                num = #v1309
+                                cteator = voterName, 
+                                label = displayName, 
+                                num = #votingFunctions
                             });
                         end;
                     else
@@ -5337,79 +5293,79 @@ end)();
                                 return;
                             end;
                         end;
-                        v1323 = {
+                        voteInfo = {
                             rows = {
                                 {
-                                    resname = v1329, 
+                                    resname = resourceNameVote, 
                                     votes = 0, 
-                                    creator = v1322, 
-                                    label = v1331, 
+                                    creator = voterName, 
+                                    label = displayName, 
                                     num = 1
                                 }
                             }, 
                             cancel = 0, 
-                            start = getTickCount() + v1324 * 1000, 
-                            name = v1321
+                            start = getTickCount() + voteTimeSec * 1000, 
+                            name = voteIdentifier
                         };
-                        v1309 = {
-                            v1312
+                        votingFunctions = {
+                            executeVoteResult
                         };
                     end;
-                    if #v1325 == 0 then
-                        v1325 = v1331;
+                    if #voteOptionsText == 0 then
+                        voteOptionsText = displayName;
                     else
-                        v1325 = v1325 .. ", " .. v1331;
+                        voteOptionsText = voteOptionsText .. ", " .. displayName;
                     end;
                 end;
-                if isTimer(v1308) then
-                    killTimer(v1308);
+                if isTimer(votingTimer) then
+                    killTimer(votingTimer);
                 end;
-                v1308 = setTimer(onVotingFinish, v1324 * 1000, 1);
-                if v1322 ~= "Console" then
-                    outputLangString(root, "voting_start", v1322, v1325);
+                votingTimer = setTimer(onVotingFinish, voteTimeSec * 1000, 1);
+                if voterName ~= "Console" then
+                    outputLangString(root, "voting_start", voterName, voteOptionsText);
                 end;
-                return setTacticsData(v1323, "voting");
-            elseif type(v1319) == "string" then
-                v1323 = getTacticsData("voting");
-                local v1336 = "";
-                local v1337 = "";
-                if string.find(v1319, "_") ~= nil then
-                    v1337 = string.lower(string.sub(v1319, 1, string.find(v1319, "_") - 1));
+                return setTacticsData(voteInfo, "voting");
+            elseif type(voteData) == "string" then
+                voteInfo = getTacticsData("voting");
+                local resourceDisplayName2 = "";
+                local voteModeName = "";
+                if string.find(voteData, "_") ~= nil then
+                    voteModeName = string.lower(string.sub(voteData, 1, string.find(voteData, "_") - 1));
                 end;
-                local v1338 = getTacticsData("map_disabled") or {};
-                local v1339 = getResourceFromName(v1319);
-                if v1339 and #v1337 > 0 and getTacticsData("modes", v1337, "enable") ~= "false" and not v1338[v1319] then
-                    v1336 = getResourceInfo(v1339, "name");
-                    if not v1336 then
-                        v1336 = string.sub(string.gsub(getResourceName(v1339), "_", " "), #v1337 + 2);
-                        if #v1336 > 1 then
-                            v1336 = string.upper(string.sub(v1336, 1, 1)) .. string.sub(v1336, 2);
+                local disabledMapsTable4 = getTacticsData("map_disabled") or {};
+                local mapResourceVote = getResourceFromName(voteData);
+                if mapResourceVote and #voteModeName > 0 and getTacticsData("modes", voteModeName, "enable") ~= "false" and not disabledMapsTable4[voteData] then
+                    resourceDisplayName2 = getResourceInfo(mapResourceVote, "name");
+                    if not resourceDisplayName2 then
+                        resourceDisplayName2 = string.sub(string.gsub(getResourceName(mapResourceVote), "_", " "), #voteModeName + 2);
+                        if #resourceDisplayName2 > 1 then
+                            resourceDisplayName2 = string.upper(string.sub(resourceDisplayName2, 1, 1)) .. string.sub(resourceDisplayName2, 2);
                         end;
                     end;
-                    v1336 = string.upper(string.sub(v1337, 1, 1)) .. string.sub(v1337, 2) .. ": " .. v1336;
-                elseif v1322 ~= "Console" then
+                    resourceDisplayName2 = string.upper(string.sub(voteModeName, 1, 1)) .. string.sub(voteModeName, 2) .. ": " .. resourceDisplayName2;
+                elseif voterName ~= "Console" then
                     outputLangString(source, "voting_notexist");
                     return;
                 end;
-                if v1323 and v1323.rows and #v1323.rows > 0 and v1323.cancel then
-                    if #v1323.rows > 8 then
+                if voteInfo and voteInfo.rows and #voteInfo.rows > 0 and voteInfo.cancel then
+                    if #voteInfo.rows > 8 then
                         return;
                     else
-                        for _, v1341 in ipairs(v1323.rows) do
-                            if v1341[1] == v1319 then
+                        for _, existingVoteRow in ipairs(voteInfo.rows) do
+                            if existingVoteRow[1] == voteData then
                                 return;
                             end;
                         end;
-                        table.insert(v1309, v1312);
-                        table.insert(v1323.rows, {
-                            resname = v1319, 
+                        table.insert(votingFunctions, executeVoteResult);
+                        table.insert(voteInfo.rows, {
+                            resname = voteData, 
                             votes = 0, 
-                            creator = v1322, 
-                            label = v1336, 
-                            num = #v1309
+                            creator = voterName, 
+                            label = resourceDisplayName2, 
+                            num = #votingFunctions
                         });
-                        if v1322 ~= "Console" then
-                            outputLangString(root, "voting_start", v1322, v1336);
+                        if voterName ~= "Console" then
+                            outputLangString(root, "voting_start", voterName, resourceDisplayName2);
                         end;
                     end;
                 else
@@ -5422,79 +5378,78 @@ end)();
                             return;
                         end;
                     end;
-                    local v1342 = TimeToSec(getTacticsData("settings", "vote_duration") or "0:20");
-                    v1323 = {
+                    local voteDurationSec2 = TimeToSec(getTacticsData("settings", "vote_duration") or "0:20");
+                    voteInfo = {
                         rows = {
                             {
-                                resname = v1319, 
+                                resname = voteData, 
                                 votes = 0, 
-                                creator = v1322, 
-                                label = v1336, 
+                                creator = voterName, 
+                                label = resourceDisplayName2, 
                                 num = 1
                             }
                         }, 
                         cancel = 0, 
-                        start = getTickCount() + v1342 * 1000, 
-                        name = v1321
+                        start = getTickCount() + voteDurationSec2 * 1000, 
+                        name = voteIdentifier
                     };
-                    v1309 = {
-                        v1312
+                    votingFunctions = {
+                        executeVoteResult
                     };
-                    if isTimer(v1308) then
-                        killTimer(v1308);
+                    if isTimer(votingTimer) then
+                        killTimer(votingTimer);
                     end;
-                    v1308 = setTimer(onVotingFinish, v1342 * 1000, 1);
-                    if v1322 ~= "Console" then
-                        outputLangString(root, "voting_start", v1322, v1336);
+                    votingTimer = setTimer(onVotingFinish, voteDurationSec2 * 1000, 1);
+                    if voterName ~= "Console" then
+                        outputLangString(root, "voting_start", voterName, resourceDisplayName2);
                     end;
                 end;
-                return setTacticsData(v1323, "voting");
-            elseif type(v1319) == "number" then
-                v1323 = getTacticsData("voting");
-                if v1323 and v1323.rows and #v1323.rows > 0 and v1323.cancel and v1319 <= #v1323.rows then
-                    if v1320 and v1320 > 0 then
-                        v1323.rows[v1320].votes = v1323.rows[v1320].votes - 1;
+                return setTacticsData(voteInfo, "voting");
+            elseif type(voteData) == "number" then
+                voteInfo = getTacticsData("voting");
+                if voteInfo and voteInfo.rows and #voteInfo.rows > 0 and voteInfo.cancel and voteData <= #voteInfo.rows then
+                    if previousVote and previousVote > 0 then
+                        voteInfo.rows[previousVote].votes = voteInfo.rows[previousVote].votes - 1;
                     end;
-                    if v1320 == 0 then
-                        v1323.cancel = v1323.cancel - 1;
+                    if previousVote == 0 then
+                        voteInfo.cancel = voteInfo.cancel - 1;
                     end;
-                    if v1319 > 0 then
-                        v1323.rows[v1319].votes = v1323.rows[v1319].votes + 1;
-                        if v1323.rows[v1319].votes > 0.5 * getPlayerCount() then
-                            setTacticsData(v1323, "voting");
+                    if voteData > 0 then
+                        voteInfo.rows[voteData].votes = voteInfo.rows[voteData].votes + 1;
+                        if voteInfo.rows[voteData].votes > 0.5 * getPlayerCount() then
+                            setTacticsData(voteInfo, "voting");
                             onVotingFinish();
                             return;
                         end;
                     else
-                        v1323.cancel = v1323.cancel + 1;
-                        if v1323.cancel > 0.5 * getPlayerCount() then
-                            setTacticsData(v1323, "voting");
+                        voteInfo.cancel = voteInfo.cancel + 1;
+                        if voteInfo.cancel > 0.5 * getPlayerCount() then
+                            setTacticsData(voteInfo, "voting");
                             onVotingFinish();
                             return;
                         end;
                     end;
-                    return setTacticsData(v1323, "voting");
+                    return setTacticsData(voteInfo, "voting");
                 end;
             end;
             return;
         end;
     end;
-    onVotingFinish = function() --[[ Line: 201 ]]
-        -- upvalues: v1308 (ref), v1309 (ref)
-        if isTimer(v1308) then
-            killTimer(v1308);
+    onVotingFinish = function() 
+        if isTimer(votingTimer) then
+            killTimer(votingTimer);
         end;
-        local v1343 = getTacticsData("voting");
-        if v1343 and #v1343.rows > 0 and v1343.cancel then
-            if #v1343.rows > 1 then
-                table.sort(v1343.rows, function(v1344, v1345) --[[ Line: 206 ]]
-                    return v1344.votes > v1345.votes;
+        local finalVoteInfo = getTacticsData("voting");
+        if finalVoteInfo and #finalVoteInfo.rows > 0 and finalVoteInfo.cancel then
+            if #finalVoteInfo.rows > 1 then
+                table.sort(finalVoteInfo.rows, function(rowA, rowB) 
+                    return rowA.votes > rowB.votes;
                 end);
             end;
-            local v1346 = v1343.rows[1];
-            if v1346.votes > 0 and v1346.votes > v1343.cancel and type(v1309[v1346.num]) == "function" then
-                triggerEvent("onVotingResult", root, v1346);
-                if v1309[v1346.num](v1346) then
+            local winningOption = finalVoteInfo.rows[1];
+            if winningOption.votes > 0 and winningOption.votes > finalVoteInfo.cancel and type(votingFunctions[winningOption.num]) == "function" then
+                triggerEvent("onVotingResult", root, winningOption);
+                if votingFunctions[winningOption.num](winningOption) then
                     return;
                 end;
             end;
@@ -5505,37 +5460,37 @@ end)();
             nextMap();
         end;
     end;
-    onPlayerPreview = function(v1347) --[[ Line: 222 ]]
+    onPlayerPreview = function(previewMap) 
         if source ~= client then return end
         if not hasObjectPermissionTo(getThisResource(), "general.ModifyOtherObjects", false) then
             triggerClientEvent(source, "onClientPreviewMapLoading", root, false, {});
             outputLangString(source, "resource_have_not_permissions", getResourceName(getThisResource()), "general.ModifyOtherObjects");
             return;
         else
-            local v1348 = {};
-            local v1349 = xmlLoadFile(":" .. v1347 .. "/meta.xml");
-            for _, v1351 in ipairs(xmlNodeGetChildren(v1349)) do
-                if xmlNodeGetName(v1351) == "map" then
-                    local v1352 = xmlLoadFile(":" .. v1347 .. "/" .. xmlNodeGetAttribute(v1351, "src"));
-                    for _, v1354 in ipairs(xmlNodeGetChildren(v1352)) do
-                        table.insert(v1348, {
-                            xmlNodeGetName(v1354), 
-                            xmlNodeGetAttributes(v1354)
+            local mapElementsList = {};
+            local mapMetaXML2 = xmlLoadFile(":" .. previewMap .. "/meta.xml");
+            for _, metaNode2 in ipairs(xmlNodeGetChildren(mapMetaXML2)) do
+                if xmlNodeGetName(metaNode2) == "map" then
+                    local mapDataXML2 = xmlLoadFile(":" .. previewMap .. "/" .. xmlNodeGetAttribute(metaNode2, "src"));
+                    for _, dataNode in ipairs(xmlNodeGetChildren(mapDataXML2)) do
+                        table.insert(mapElementsList, {
+                            xmlNodeGetName(dataNode), 
+                            xmlNodeGetAttributes(dataNode)
                         });
                     end;
-                    xmlUnloadFile(v1352);
+                    xmlUnloadFile(mapDataXML2);
                 end;
             end;
-            xmlUnloadFile(v1349);
-            local v1355 = false;
-            local l_pairs_8 = pairs;
-            local v1357 = getTacticsData("modes_defined") or {};
-            for v1358 in l_pairs_8(v1357) do
-                if string.find(v1347, v1358) == 1 then
-                    v1355 = v1358;
+            xmlUnloadFile(mapMetaXML2);
+            local foundMode = false;
+            local pairsFunc8 = pairs;
+            local modesDefinedTable = getTacticsData("modes_defined") or {};
+            for modeKeyVote in pairsFunc8(modesDefinedTable) do
+                if string.find(previewMap, modeKeyVote) == 1 then
+                    foundMode = modeKeyVote;
                 end;
             end;
-            triggerClientEvent(source, "onClientPreviewMapLoading", root, v1355, v1348);
+            triggerClientEvent(source, "onClientPreviewMapLoading", root, foundMode, mapElementsList);
             return;
         end;
     end;
@@ -5546,248 +5501,240 @@ end)();
     addEventHandler("onPlayerVote", root, onPlayerVote);
     addEventHandler("onPlayerPreview", root, onPlayerPreview);
 end)();
-(function(...) --[[ Line: 0 ]]
-    local v1359 = {};
-    local v1360 = {};
-    local v1361 = "";
-    local v1362 = "";
-    local v1363 = "";
-    local v1364 = "";
-    local v1365 = {
+(function(...) 
+    local teamsStatData = {};
+    local previousTeamsData = {};
+    local roundLog = "";
+    local previousRoundLog = "";
+    local currentMapName = "";
+    local previousMapName = "";
+    local trackedStats = {
         Damage = true, 
         Kills = true, 
         Deaths = true
     };
-    local v1366 = {};
-    setRoundStatisticData = function(...) --[[ Line: 15 ]]
-        -- upvalues: v1365 (ref)
-        v1365 = {};
-        for _, v1368 in ipairs({
+    local elementIndexMap = {};
+    setRoundStatisticData = function(...) 
+        trackedStats = {};
+        for _, statName in ipairs({
             ...
         }) do
-            if type(v1368) == "string" then
-                v1365[v1368] = true;
+            if type(statName) == "string" then
+                trackedStats[statName] = true;
             end;
         end;
         triggerClientEvent(root, "onClientStatisticChange", root, ...);
         return true;
     end;
-    onMapStarting = function(v1369) --[[ Line: 26 ]]
-        -- upvalues: v1359 (ref), v1361 (ref), v1366 (ref), v1363 (ref)
-        v1359 = {};
-        v1361 = "";
-        v1366 = {};
-        v1363 = v1369.name;
-        local v1370 = getElementsByType("team");
-        table.remove(v1370, 1);
-        local v1371 = getTacticsData("Teamsides");
-        local v1372 = getTacticsData("SideNames");
-        local v1373 = getTacticsData("LogoLink") or "http://gta-rating.ru/forum/images/rml/";
-        for _, v1375 in ipairs(v1370) do
-            local v1376, v1377, v1378 = getTeamColor(v1375);
-            table.insert(v1359, {
-                name = getTeamName(v1375), 
-                score = tonumber(getElementData(v1375, "Score")), 
-                side = v1372[2 - v1371[v1375] % 2], 
-                r = v1376, 
-                g = v1377, 
-                b = v1378, 
+    onMapStarting = function(mapStartInfo) 
+        teamsStatData = {};
+        roundLog = "";
+        elementIndexMap = {};
+        currentMapName = mapStartInfo.name;
+        local playingTeams = getElementsByType("team");
+        table.remove(playingTeams, 1);
+        local teamSidesMap2 = getTacticsData("Teamsides");
+        local sideNamesArray = getTacticsData("SideNames");
+        local logoBaseURL = getTacticsData("LogoLink") or "http://gta-rating.ru/forum/images/rml/";
+        for _, statTeam in ipairs(playingTeams) do
+            local teamColorR3, teamColorG3, teamColorB3 = getTeamColor(statTeam);
+            table.insert(teamsStatData, {
+                name = getTeamName(statTeam), 
+                score = tonumber(getElementData(statTeam, "Score")), 
+                side = sideNamesArray[2 - teamSidesMap2[statTeam] % 2], 
+                r = teamColorR3, 
+                g = teamColorG3, 
+                b = teamColorB3, 
                 players = {}, 
                 image = nil
             });
-            v1366[v1375] = #v1359;
-            fetchRemote(v1373 .. getTeamName(v1375) .. ".png", onStatisticImageLoad, "", false, v1375);
+            elementIndexMap[statTeam] = #teamsStatData;
+            fetchRemote(logoBaseURL .. getTeamName(statTeam) .. ".png", onStatisticImageLoad, "", false, statTeam);
         end;
     end;
-    onStatisticImageLoad = function(v1379, v1380, v1381) --[[ Line: 51 ]]
-        -- upvalues: v1366 (ref), v1359 (ref)
-        if v1380 ~= 0 or not v1366[v1381] then
+    onStatisticImageLoad = function(imageData, responseCode, teamForImage) 
+        if responseCode ~= 0 or not elementIndexMap[teamForImage] then
             return;
         else
-            v1359[v1366[v1381]].image = v1379;
+            teamsStatData[elementIndexMap[teamForImage]].image = imageData;
             return;
         end;
     end;
-    outputRoundLog = function(v1382, v1383) --[[ Line: 55 ]]
-        -- upvalues: v1361 (ref)
-        v1361 = v1361 .. "\n";
-        if not v1383 then
-            local v1384 = 0;
-            local v1385 = getTacticsData("timestart");
-            if v1385 then
-                v1384 = math.max(0, isRoundPaused() and v1385 or getTickCount() - v1385);
+    outputRoundLog = function(logMessage, isTimestamp) 
+        roundLog = roundLog .. "\n";
+        if not isTimestamp then
+            local elapsedTime = 0;
+            local timeStart = getTacticsData("timestart");
+            if timeStart then
+                elapsedTime = math.max(0, isRoundPaused() and timeStart or getTickCount() - timeStart);
             end;
-            local v1386 = MSecToTime(v1384, 0);
-            v1361 = v1361 .. string.format("[%s] ", v1386);
+            local formattedElapsedTime = MSecToTime(elapsedTime, 0);
+            roundLog = roundLog .. string.format("[%s] ", formattedElapsedTime);
         end;
-        v1361 = v1361 .. removeColorCoding(v1382);
+        roundLog = roundLog .. removeColorCoding(logMessage);
     end;
-    onRoundStart = function() --[[ Line: 68 ]]
-        -- upvalues: v1361 (ref), v1366 (ref), v1365 (ref), v1359 (ref)
-        local v1387 = getRealTime();
-        v1361 = string.format("[%02i:%02i - %i.%02i.%04i] Round start", v1387.hour, v1387.minute, v1387.monthday, v1387.month + 1, v1387.year + 1900);
-        for _, v1389 in ipairs(getTacticsData("Sides")) do
-            local v1390 = "";
-            for _, v1392 in ipairs(getPlayersInTeam(v1389)) do
-                if getPlayerGameStatus(v1392) == "Play" then
-                    if not v1366[v1392] then
-                        local v1393 = {
-                            name = removeColorCoding(getPlayerName(v1392))
+    onRoundStart = function() 
+        local currentRealTime = getRealTime();
+        roundLog = string.format("[%02i:%02i - %i.%02i.%04i] Round start", currentRealTime.hour, currentRealTime.minute, currentRealTime.monthday, currentRealTime.month + 1, currentRealTime.year + 1900);
+        for _, sideTeam2 in ipairs(getTacticsData("Sides")) do
+            local playerNamesList = "";
+            for _, playingPlayer2 in ipairs(getPlayersInTeam(sideTeam2)) do
+                if getPlayerGameStatus(playingPlayer2) == "Play" then
+                    if not elementIndexMap[playingPlayer2] then
+                        local playerStatEntry = {
+                            name = removeColorCoding(getPlayerName(playingPlayer2))
                         };
-                        for v1394 in pairs(v1365) do
-                            v1393[v1394] = 0;
+                        for statKeyName in pairs(trackedStats) do
+                            playerStatEntry[statKeyName] = 0;
                         end;
-                        table.insert(v1359[v1366[v1389]].players, v1393);
-                        v1366[v1392] = #v1359[v1366[v1389]].players;
+                        table.insert(teamsStatData[elementIndexMap[sideTeam2]].players, playerStatEntry);
+                        elementIndexMap[playingPlayer2] = #teamsStatData[elementIndexMap[sideTeam2]].players;
                     end;
-                    v1390 = v1390 .. ", " .. removeColorCoding(getPlayerName(v1392));
+                    playerNamesList = playerNamesList .. ", " .. removeColorCoding(getPlayerName(playingPlayer2));
                 end;
             end;
-            outputRoundLog(getTeamName(v1389) .. ": " .. (#v1390 > 0 and string.sub(v1390, 3) or ""), true);
+            outputRoundLog(getTeamName(sideTeam2) .. ": " .. (#playerNamesList > 0 and string.sub(playerNamesList, 3) or ""), true);
         end;
         outputRoundLog("", true);
     end;
-    onRoundFinish = function(v1395, v1396, _) --[[ Line: 90 ]]
-        -- upvalues: v1366 (ref), v1359 (ref), v1363 (ref), v1361 (ref), v1364 (ref), v1360 (ref), v1362 (ref)
-        if v1395 then
-            local v1398 = "";
-            local v1399 = "";
-            if type(v1395) == "table" then
-                if type(v1395[1]) == "string" then
-                    local l_v1395_0 = v1395;
-                    local v1401 = table.remove(l_v1395_0, 1);
-                    v1398 = string.format(getString(tostring(v1401)), unpack(l_v1395_0));
+    onRoundFinish = function(winMessage, subMessage, _) 
+        if winMessage then
+            local formattedWinMessage = "";
+            local formattedSubMessage = "";
+            if type(winMessage) == "table" then
+                if type(winMessage[1]) == "string" then
+                    local winArgs2 = winMessage;
+                    local messageKey3 = table.remove(winArgs2, 1);
+                    formattedWinMessage = string.format(getString(tostring(messageKey3)), unpack(winArgs2));
                 else
-                    local v1402 = v1395[4];
-                    local l_v1395_1 = v1395;
-                    table.remove(l_v1395_1, 1);
-                    table.remove(l_v1395_1, 1);
-                    table.remove(l_v1395_1, 1);
-                    table.remove(l_v1395_1, 1);
-                    v1398 = string.format(getString(tostring(v1402)), unpack(l_v1395_1));
+                    local messageID2 = winMessage[4];
+                    local winArgs3 = winMessage;
+                    table.remove(winArgs3, 1);
+                    table.remove(winArgs3, 1);
+                    table.remove(winArgs3, 1);
+                    table.remove(winArgs3, 1);
+                    formattedWinMessage = string.format(getString(tostring(messageID2)), unpack(winArgs3));
                 end;
-            elseif type(v1395) == "string" then
-                v1398 = getString(v1395);
-                if #v1398 == 0 then
-                    v1398 = tostring(v1395);
+            elseif type(winMessage) == "string" then
+                formattedWinMessage = getString(winMessage);
+                if #formattedWinMessage == 0 then
+                    formattedWinMessage = tostring(winMessage);
                 end;
             else
-                v1398 = tostring(v1395);
+                formattedWinMessage = tostring(winMessage);
             end;
-            if v1396 then
-                if type(v1396) == "table" then
-                    local l_v1396_0 = v1396;
-                    local v1405 = table.remove(l_v1396_0, 1);
-                    v1399 = string.format(getString(tostring(v1405)), unpack(l_v1396_0));
-                elseif type(v1396) == "string" then
-                    v1399 = getString(v1396);
-                    if #v1399 == 0 then
-                        v1399 = tostring(v1396);
+            if subMessage then
+                if type(subMessage) == "table" then
+                    local subArgs = subMessage;
+                    local subMessageKey = table.remove(subArgs, 1);
+                    formattedSubMessage = string.format(getString(tostring(subMessageKey)), unpack(subArgs));
+                elseif type(subMessage) == "string" then
+                    formattedSubMessage = getString(subMessage);
+                    if #formattedSubMessage == 0 then
+                        formattedSubMessage = tostring(subMessage);
                     end;
                 else
-                    v1399 = tostring(v1396);
+                    formattedSubMessage = tostring(subMessage);
                 end;
-                v1399 = " (" .. v1399 .. ")";
+                formattedSubMessage = " (" .. formattedSubMessage .. ")";
             end;
-            outputRoundLog(v1398 .. v1399);
+            outputRoundLog(formattedWinMessage .. formattedSubMessage);
         end;
-        local v1406 = getElementsByType("team");
-        table.remove(v1406, 1);
-        for _, v1408 in ipairs(v1406) do
-            if v1366[v1408] then
-                v1359[v1366[v1408]].score = tonumber(getElementData(v1408, "Score"));
+        local allTeams2 = getElementsByType("team");
+        table.remove(allTeams2, 1);
+        for _, statTeam2 in ipairs(allTeams2) do
+            if elementIndexMap[statTeam2] then
+                teamsStatData[elementIndexMap[statTeam2]].score = tonumber(getElementData(statTeam2, "Score"));
             end;
         end;
-        setTimer(callClientFunction, 1000, 1, root, "updateRoundStatistic", v1363, v1359, v1361);
-        v1364 = v1363;
-        v1360 = {
-            unpack(v1359)
+        setTimer(callClientFunction, 1000, 1, root, "updateRoundStatistic", currentMapName, teamsStatData, roundLog);
+        previousMapName = currentMapName;
+        previousTeamsData = {
+            unpack(teamsStatData)
         };
-        v1362 = v1361;
+        previousRoundLog = roundLog;
     end;
-    onPlayerDownloadComplete = function() --[[ Line: 137 ]]
-        -- upvalues: v1364 (ref), v1360 (ref), v1362 (ref)
-        callClientFunction(source, "updateRoundStatistic", v1364, v1360, v1362, true);
+    onPlayerDownloadComplete = function() 
+        callClientFunction(source, "updateRoundStatistic", previousMapName, previousTeamsData, previousRoundLog, true);
     end;
-    onElementDataChange = function(v1409, v1410) --[[ Line: 140 ]]
-        -- upvalues: v1366 (ref), v1365 (ref), v1359 (ref)
-        local v1411 = getElementType(source);
-        if v1411 == "player" and v1409 == "Status" and getElementData(source, v1409) == "Play" and not v1366[source] then
-            local v1412 = getPlayerTeam(source);
-            if not v1366[v1412] then
+    onElementDataChange = function(changedDataKey, oldDataValue2) 
+        local elementType2 = getElementType(source);
+        if elementType2 == "player" and changedDataKey == "Status" and getElementData(source, changedDataKey) == "Play" and not elementIndexMap[source] then
+            local playerStatTeam = getPlayerTeam(source);
+            if not elementIndexMap[playerStatTeam] then
                 return;
             else
-                local v1413 = {
+                local newPlayerStat = {
                     name = removeColorCoding(getPlayerName(source))
                 };
-                for v1414 in pairs(v1365) do
-                    v1413[v1414] = 0;
+                for statKey2 in pairs(trackedStats) do
+                    newPlayerStat[statKey2] = 0;
                 end;
-                table.insert(v1359[v1366[v1412]].players, v1413);
-                v1366[source] = #v1359[v1366[v1412]].players;
+                table.insert(teamsStatData[elementIndexMap[playerStatTeam]].players, newPlayerStat);
+                elementIndexMap[source] = #teamsStatData[elementIndexMap[playerStatTeam]].players;
             end;
         end;
-        if (v1411 == "player" or v1411 == "team") and v1365[v1409] and v1366[source] then
-            local v1415 = tonumber(getElementData(source, v1409));
-            if type(v1415) == "number" and type(v1410) == "number" then
-                v1415 = v1415 - v1410;
+        if (elementType2 == "player" or elementType2 == "team") and trackedStats[changedDataKey] and elementIndexMap[source] then
+            local statDifference = tonumber(getElementData(source, changedDataKey));
+            if type(statDifference) == "number" and type(oldDataValue2) == "number" then
+                statDifference = statDifference - oldDataValue2;
             else
-                v1415 = 0;
+                statDifference = 0;
             end;
-            if v1411 == "team" then
-                v1359[v1366[source]][v1409] = v1359[v1366[source]][v1409] + v1415;
+            if elementType2 == "team" then
+                teamsStatData[elementIndexMap[source]][changedDataKey] = teamsStatData[elementIndexMap[source]][changedDataKey] + statDifference;
             else
-                local v1416 = getPlayerTeam(source);
-                if v1366[v1416] then
-                    v1359[v1366[v1416]].players[v1366[source]][v1409] = v1359[v1366[v1416]].players[v1366[source]][v1409] + v1415;
+                local playerTeamForStat = getPlayerTeam(source);
+                if elementIndexMap[playerTeamForStat] then
+                    teamsStatData[elementIndexMap[playerTeamForStat]].players[elementIndexMap[source]][changedDataKey] = teamsStatData[elementIndexMap[playerTeamForStat]].players[elementIndexMap[source]][changedDataKey] + statDifference;
                 end;
             end;
         end;
     end;
-    onPlayerWasted = function(_, v1418, v1419, v1420) --[[ Line: 167 ]]
-        local v1421 = nil;
-        if v1418 then
-            if v1418 ~= source then
-                local v1422 = getElementType(v1418);
-                if v1422 == "player" then
-                    v1421 = getPlayerName(v1418) .. " killed " .. getPlayerName(source);
-                elseif v1422 == "vehicle" then
-                    v1421 = getPlayerName(getVehicleController(v1418)) .. " killed " .. getPlayerName(source) .. " (" .. getVehicleName(v1418) .. ")";
+    onPlayerWasted = function(_, killerElement, weaponID4, bodyPart) 
+        local deathMessage = nil;
+        if killerElement then
+            if killerElement ~= source then
+                local killerType = getElementType(killerElement);
+                if killerType == "player" then
+                    deathMessage = getPlayerName(killerElement) .. " killed " .. getPlayerName(source);
+                elseif killerType == "vehicle" then
+                    deathMessage = getPlayerName(getVehicleController(killerElement)) .. " killed " .. getPlayerName(source) .. " (" .. getVehicleName(killerElement) .. ")";
                 end;
             else
-                v1421 = getPlayerName(source) .. " committed suicide";
+                deathMessage = getPlayerName(source) .. " committed suicide";
             end;
         else
-            v1421 = getPlayerName(source) .. " died";
+            deathMessage = getPlayerName(source) .. " died";
         end;
-        if v1419 then
-            local v1423 = getWeaponNameFromID(v1419);
-            if v1423 then
-                v1421 = v1421 .. " (" .. v1423 .. ")";
+        if weaponID4 then
+            local weaponName = getWeaponNameFromID(weaponID4);
+            if weaponName then
+                deathMessage = deathMessage .. " (" .. weaponName .. ")";
             end;
         end;
-        if v1420 and getBodyPartName(v1420) then
-            v1421 = v1421 .. " (" .. getBodyPartName(v1420) .. ")";
+        if bodyPart and getBodyPartName(bodyPart) then
+            deathMessage = deathMessage .. " (" .. getBodyPartName(bodyPart) .. ")";
         end;
-        outputRoundLog(removeColorCoding(v1421));
+        outputRoundLog(removeColorCoding(deathMessage));
     end;
-    onPauseToggle = function(v1424, v1425) --[[ Line: 197 ]]
-        if v1424 then
+    onPauseToggle = function(isPaused, pauseDuration) 
+        if isPaused then
             outputRoundLog("Game paused");
         else
-            local v1426 = MSecToTime(v1425, 0);
-            outputRoundLog(string.format("[+%s] Game unpaused", v1426), true);
+            local formattedPauseTime = MSecToTime(pauseDuration, 0);
+            outputRoundLog(string.format("[+%s] Game unpaused", formattedPauseTime), true);
         end;
     end;
 
-    dataAntiChange = function(theKey, oldValue, newValue)
+    dataAntiChange = function(changedElementData, oldDataValue, newDataValue)
         if client and client ~= nil and source ~= nil then
             if getElementType(client) == "player" and getElementType(source) == "player" then
                 if client ~= source then
-                    if theKey == "spectateskin" and not hasObjectPermissionTo(client, "general.tactics_openpanel", false) then
-                        setElementData(source, theKey, oldValue)
-                    elseif theKey ~= "spectateskin" then
-                        setElementData(source, theKey, oldValue)
+                    if changedElementData == "spectateskin" and not hasObjectPermissionTo(client, "general.tactics_openpanel", false) then
+                        setElementData(source, changedElementData, oldDataValue)
+                    elseif changedElementData ~= "spectateskin" then
+                        setElementData(source, changedElementData, oldDataValue)
                     end
                 end
             end
